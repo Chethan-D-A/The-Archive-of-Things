@@ -1,0 +1,753 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1.0">
+<title>VOID // OFFLINE</title>
+
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+
+html,body{
+    width:100%;
+    height:100%;
+    overflow:hidden;
+    background:#020205;
+    color:white;
+    font-family:Arial,Helvetica,sans-serif;
+    cursor:none;
+}
+
+body{
+    perspective:1200px;
+}
+
+/* ---------- BACKGROUND ---------- */
+
+canvas{
+    position:fixed;
+    inset:0;
+    width:100%;
+    height:100%;
+}
+
+#space{z-index:0}
+#particles{z-index:1}
+
+.vignette{
+    position:fixed;
+    inset:0;
+    z-index:5;
+    pointer-events:none;
+    background:
+      radial-gradient(circle at center,
+        transparent 15%,
+        rgba(0,0,0,.08) 45%,
+        rgba(0,0,0,.8) 100%);
+}
+
+.scanlines{
+    position:fixed;
+    inset:0;
+    z-index:20;
+    pointer-events:none;
+    opacity:.12;
+    background:repeating-linear-gradient(
+        to bottom,
+        transparent 0px,
+        transparent 3px,
+        rgba(255,255,255,.08) 4px
+    );
+    mix-blend-mode:screen;
+}
+
+.noise{
+    position:fixed;
+    inset:-50%;
+    z-index:21;
+    pointer-events:none;
+    opacity:.035;
+    background-image:url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+    animation:noise .2s steps(2) infinite;
+}
+
+@keyframes noise{
+    0%{transform:translate(0,0)}
+    25%{transform:translate(2%, -1%)}
+    50%{transform:translate(-1%,2%)}
+    75%{transform:translate(1%,1%)}
+    100%{transform:translate(-2%,-2%)}
+}
+
+/* ---------- UI ---------- */
+
+.ui{
+    position:fixed;
+    inset:0;
+    z-index:10;
+    pointer-events:none;
+}
+
+.top{
+    position:absolute;
+    top:35px;
+    left:45px;
+    right:45px;
+    display:flex;
+    justify-content:space-between;
+    align-items:center;
+    font-size:10px;
+    letter-spacing:5px;
+    text-transform:uppercase;
+    opacity:.65;
+}
+
+.status{
+    display:flex;
+    gap:14px;
+    align-items:center;
+}
+
+.dot{
+    width:7px;
+    height:7px;
+    border-radius:50%;
+    background:#fff;
+    box-shadow:0 0 15px #fff,0 0 35px #8ff;
+    animation:pulse 1.5s infinite;
+}
+
+@keyframes pulse{
+    0%,100%{opacity:.35;transform:scale(.7)}
+    50%{opacity:1;transform:scale(1.2)}
+}
+
+/* ---------- HERO ---------- */
+
+.hero{
+    position:absolute;
+    left:50%;
+    top:50%;
+    transform:translate(-50%,-50%);
+    text-align:center;
+    width:min(1000px,90vw);
+}
+
+.kicker{
+    font-size:10px;
+    letter-spacing:9px;
+    margin-bottom:28px;
+    opacity:.5;
+    animation:fadeUp 2s .2s both;
+}
+
+.title{
+    position:relative;
+    font-size:clamp(65px,13vw,190px);
+    line-height:.75;
+    font-weight:900;
+    letter-spacing:-9px;
+    text-transform:uppercase;
+    transform-style:preserve-3d;
+    animation:arrival 2.2s cubic-bezier(.16,1,.3,1) both;
+}
+
+.title span{
+    display:block;
+    background:linear-gradient(
+        180deg,
+        #fff 0%,
+        #fff 25%,
+        #777 55%,
+        #111 100%
+    );
+    -webkit-background-clip:text;
+    background-clip:text;
+    color:transparent;
+    text-shadow:
+      0 0 1px white,
+      0 20px 70px rgba(255,255,255,.12);
+}
+
+.title:before,
+.title:after{
+    content:"VOID";
+    position:absolute;
+    inset:0;
+    pointer-events:none;
+    background:linear-gradient(90deg,#0ff,#f0f,#0ff);
+    -webkit-background-clip:text;
+    color:transparent;
+    opacity:0;
+}
+
+.title:before{
+    animation:glitch 5s infinite;
+}
+
+.title:after{
+    animation:glitch2 5s infinite;
+}
+
+@keyframes glitch{
+    0%,87%,100%{opacity:0;transform:none}
+    88%{opacity:.8;transform:translate(-8px,2px);clip-path:inset(20% 0 55% 0)}
+    89%{opacity:0}
+    91%{opacity:.7;transform:translate(7px,-3px);clip-path:inset(60% 0 10% 0)}
+    92%{opacity:0}
+}
+
+@keyframes glitch2{
+    0%,90%,100%{opacity:0}
+    91%{opacity:.6;transform:translate(5px,1px);clip-path:inset(5% 0 75% 0)}
+    92%{opacity:0}
+}
+
+@keyframes arrival{
+    from{
+        opacity:0;
+        transform:scale(1.8) translateZ(-500px);
+        filter:blur(25px);
+    }
+    to{
+        opacity:1;
+        transform:scale(1) translateZ(0);
+        filter:blur(0);
+    }
+}
+
+@keyframes fadeUp{
+    from{opacity:0;transform:translateY(30px)}
+    to{opacity:.5;transform:none}
+}
+
+.subtitle{
+    margin-top:35px;
+    font-size:11px;
+    letter-spacing:6px;
+    opacity:.45;
+    animation:fadeUp 2s .8s both;
+}
+
+/* ---------- PORTAL ---------- */
+
+.portal{
+    position:absolute;
+    left:50%;
+    top:50%;
+    width:min(520px,65vw);
+    aspect-ratio:1;
+    transform:translate(-50%,-50%);
+    border-radius:50%;
+    border:1px solid rgba(255,255,255,.16);
+    box-shadow:
+      0 0 30px rgba(0,255,255,.08),
+      inset 0 0 70px rgba(255,0,255,.06);
+    animation:portalSpin 18s linear infinite;
+    pointer-events:none;
+}
+
+.portal:before,
+.portal:after{
+    content:"";
+    position:absolute;
+    inset:8%;
+    border-radius:50%;
+    border:1px solid rgba(0,255,255,.15);
+}
+
+.portal:before{
+    inset:18%;
+    border-color:rgba(255,0,255,.16);
+    animation:reverseSpin 9s linear infinite;
+}
+
+.portal:after{
+    inset:30%;
+    border-color:rgba(255,255,255,.2);
+    animation:portalPulse 3s ease-in-out infinite;
+}
+
+@keyframes portalSpin{
+    to{transform:translate(-50%,-50%) rotate(360deg)}
+}
+
+@keyframes reverseSpin{
+    to{transform:rotate(-360deg)}
+}
+
+@keyframes portalPulse{
+    0%,100%{transform:scale(.9);opacity:.2}
+    50%{transform:scale(1.08);opacity:.7}
+}
+
+/* ---------- CORNERS ---------- */
+
+.corner{
+    position:absolute;
+    width:90px;
+    height:90px;
+    opacity:.4;
+}
+
+.c1{top:35px;left:35px;border-top:1px solid white;border-left:1px solid white}
+.c2{top:35px;right:35px;border-top:1px solid white;border-right:1px solid white}
+.c3{bottom:35px;left:35px;border-bottom:1px solid white;border-left:1px solid white}
+.c4{bottom:35px;right:35px;border-bottom:1px solid white;border-right:1px solid white}
+
+/* ---------- BOTTOM ---------- */
+
+.bottom{
+    position:absolute;
+    left:45px;
+    right:45px;
+    bottom:35px;
+    display:flex;
+    justify-content:space-between;
+    align-items:end;
+    font-size:9px;
+    letter-spacing:3px;
+    opacity:.45;
+}
+
+.coordinates{
+    line-height:2;
+}
+
+.hint{
+    text-align:right;
+}
+
+/* ---------- CURSOR ---------- */
+
+.cursor{
+    position:fixed;
+    z-index:100;
+    width:20px;
+    height:20px;
+    border:1px solid rgba(255,255,255,.8);
+    border-radius:50%;
+    transform:translate(-50%,-50%);
+    pointer-events:none;
+    mix-blend-mode:difference;
+}
+
+.cursorDot{
+    position:fixed;
+    z-index:101;
+    width:4px;
+    height:4px;
+    background:white;
+    border-radius:50%;
+    transform:translate(-50%,-50%);
+    pointer-events:none;
+}
+
+/* ---------- WAKE SCREEN ---------- */
+
+.wake{
+    position:fixed;
+    inset:0;
+    z-index:200;
+    background:#000;
+    display:flex;
+    justify-content:center;
+    align-items:center;
+    transition:opacity 1.5s ease;
+}
+
+.wake.hide{
+    opacity:0;
+    pointer-events:none;
+}
+
+.wakeText{
+    text-align:center;
+    font-size:10px;
+    letter-spacing:7px;
+    opacity:.65;
+}
+
+.wakeBar{
+    margin-top:25px;
+    width:180px;
+    height:1px;
+    background:#222;
+    overflow:hidden;
+}
+
+.wakeBar:after{
+    content:"";
+    display:block;
+    width:40%;
+    height:100%;
+    background:white;
+    animation:loading 1.7s ease-in-out infinite;
+}
+
+@keyframes loading{
+    0%{transform:translateX(-150%)}
+    100%{transform:translateX(500%)}
+}
+
+/* ---------- FLASH ---------- */
+
+.flash{
+    position:fixed;
+    inset:0;
+    z-index:150;
+    background:white;
+    opacity:0;
+    pointer-events:none;
+}
+
+.flash.go{
+    animation:flash .45s ease-out;
+}
+
+@keyframes flash{
+    0%{opacity:0}
+    15%{opacity:.85}
+    100%{opacity:0}
+}
+
+/* ---------- MOBILE ---------- */
+
+@media(max-width:600px){
+    .top,.bottom{left:20px;right:20px}
+    .top{top:22px}
+    .bottom{bottom:22px}
+    .corner{width:50px;height:50px}
+    .c1{top:20px;left:20px}
+    .c2{top:20px;right:20px}
+    .c3{bottom:20px;left:20px}
+    .c4{bottom:20px;right:20px}
+    .title{letter-spacing:-5px}
+}
+</style>
+</head>
+
+<body>
+
+<div class="wake" id="wake">
+    <div class="wakeText">
+        INITIALIZING THE IMPOSSIBLE
+        <div class="wakeBar"></div>
+    </div>
+</div>
+
+<canvas id="space"></canvas>
+<canvas id="particles"></canvas>
+
+<div class="portal"></div>
+
+<div class="ui">
+
+    <div class="top">
+        <div>NO INTERNET REQUIRED</div>
+        <div class="status">
+            <i class="dot"></i>
+            SYSTEM ALIVE
+        </div>
+    </div>
+
+    <div class="corner c1"></div>
+    <div class="corner c2"></div>
+    <div class="corner c3"></div>
+    <div class="corner c4"></div>
+
+    <main class="hero">
+        <div class="kicker">AN OFFLINE EXPERIENCE</div>
+
+        <div class="title" id="title">
+            <span>VOID</span>
+        </div>
+
+        <div class="subtitle">
+            MOVE YOUR MOUSE // WAKE THE SYSTEM
+        </div>
+    </main>
+
+    <div class="bottom">
+        <div class="coordinates" id="coords">
+            X: 0000<br>
+            Y: 0000
+        </div>
+
+        <div class="hint">
+            [ CLICK ANYWHERE ]<br>
+            SOMETHING IS WAITING
+        </div>
+    </div>
+</div>
+
+<div class="cursor" id="cursor"></div>
+<div class="cursorDot" id="cursorDot"></div>
+<div class="flash" id="flash"></div>
+
+<script>
+
+/* =========================================================
+   VOID ENGINE
+   Everything below is local JavaScript.
+   No libraries. No network. No external files.
+   ========================================================= */
+
+const space = document.getElementById("space");
+const particles = document.getElementById("particles");
+
+const sctx = space.getContext("2d");
+const pctx = particles.getContext("2d");
+
+let W = innerWidth;
+let H = innerHeight;
+let mouse = {x:W/2,y:H/2};
+let target = {x:W/2,y:H/2};
+
+function resize(){
+    W = innerWidth;
+    H = innerHeight;
+
+    space.width = W * devicePixelRatio;
+    space.height = H * devicePixelRatio;
+
+    particles.width = W * devicePixelRatio;
+    particles.height = H * devicePixelRatio;
+
+    sctx.setTransform(devicePixelRatio,0,0,devicePixelRatio,0,0);
+    pctx.setTransform(devicePixelRatio,0,0,devicePixelRatio,0,0);
+}
+
+addEventListener("resize",resize);
+resize();
+
+/* ---------- STAR FIELD ---------- */
+
+const stars = [];
+
+for(let i=0;i<850;i++){
+    stars.push({
+        x:(Math.random()-.5)*2,
+        y:(Math.random()-.5)*2,
+        z:Math.random(),
+        pz:Math.random()
+    });
+}
+
+function drawSpace(){
+
+    sctx.fillStyle="rgba(2,2,5,.24)";
+    sctx.fillRect(0,0,W,H);
+
+    const cx=W/2;
+    const cy=H/2;
+
+    for(const s of stars){
+
+        s.z -= .0015;
+
+        if(s.z<=0){
+            s.x=(Math.random()-.5)*2;
+            s.y=(Math.random()-.5)*2;
+            s.z=1;
+            s.pz=1;
+        }
+
+        const sx = cx + (s.x/s.z)*Math.min(W,H)*.55;
+        const sy = cy + (s.y/s.z)*Math.min(W,H)*.55;
+
+        const px = cx + (s.x/s.pz)*Math.min(W,H)*.55;
+        const py = cy + (s.y/s.pz)*Math.min(W,H)*.55;
+
+        s.pz=s.z;
+
+        if(sx<0||sx>W||sy<0||sy>H) continue;
+
+        const size=(1-s.z)*3;
+
+        sctx.beginPath();
+        sctx.moveTo(px,py);
+        sctx.lineTo(sx,sy);
+        sctx.lineWidth=size;
+        sctx.strokeStyle=`rgba(255,255,255,${(1-s.z)*.65})`;
+        sctx.stroke();
+    }
+}
+
+/* ---------- PARTICLE FIELD ---------- */
+
+const pts=[];
+
+for(let i=0;i<260;i++){
+
+    const a=Math.random()*Math.PI*2;
+    const r=Math.pow(Math.random(),.65);
+
+    pts.push({
+        a,
+        r,
+        speed:.001+Math.random()*.003,
+        size:.4+Math.random()*2,
+        phase:Math.random()*Math.PI*2
+    });
+}
+
+function drawParticles(t){
+
+    pctx.clearRect(0,0,W,H);
+
+    const cx=W/2;
+    const cy=H/2;
+
+    for(const p of pts){
+
+        p.a += p.speed;
+
+        const radius=p.r*Math.min(W,H)*.55;
+
+        const wobble=Math.sin(t*.001+p.phase)*18;
+
+        let x=cx+Math.cos(p.a)*radius+wobble;
+        let y=cy+Math.sin(p.a)*radius;
+
+        /* Mouse gravity */
+
+        const dx=mouse.x-x;
+        const dy=mouse.y-y;
+        const d=Math.sqrt(dx*dx+dy*dy);
+
+        if(d<220){
+            const force=(1-d/220)*.8;
+            x-=dx*force;
+            y-=dy*force;
+        }
+
+        pctx.beginPath();
+        pctx.arc(x,y,p.size,0,Math.PI*2);
+
+        const glow=Math.max(0,1-p.r);
+
+        pctx.fillStyle=
+            Math.random()>.96
+            ?"rgba(255,255,255,.9)"
+            :`rgba(180,240,255,${.12+glow*.55})`;
+
+        pctx.fill();
+    }
+}
+
+/* ---------- CURSOR ---------- */
+
+const cursor=document.getElementById("cursor");
+const cursorDot=document.getElementById("cursorDot");
+const coords=document.getElementById("coords");
+const title=document.getElementById("title");
+
+addEventListener("pointermove",e=>{
+
+    target.x=e.clientX;
+    target.y=e.clientY;
+
+    coords.innerHTML=
+        `X: ${String(Math.floor(e.clientX)).padStart(4,"0")}<br>
+         Y: ${String(Math.floor(e.clientY)).padStart(4,"0")}`;
+});
+
+function cursorLoop(){
+
+    mouse.x += (target.x-mouse.x)*.09;
+    mouse.y += (target.y-mouse.y)*.09;
+
+    cursor.style.left=mouse.x+"px";
+    cursor.style.top=mouse.y+"px";
+
+    cursorDot.style.left=target.x+"px";
+    cursorDot.style.top=target.y+"px";
+
+    /* 3D typography reacts to mouse */
+
+    const rx=(mouse.y/H-.5)*-8;
+    const ry=(mouse.x/W-.5)*10;
+
+    title.style.transform=
+        `rotateX(${rx}deg) rotateY(${ry}deg)`;
+
+    requestAnimationFrame(cursorLoop);
+}
+
+cursorLoop();
+
+/* ---------- CLICK EVENT ---------- */
+
+let clicks=0;
+
+addEventListener("click",()=>{
+
+    clicks++;
+
+    const flash=document.getElementById("flash");
+    flash.classList.remove("go");
+
+    void flash.offsetWidth;
+
+    flash.classList.add("go");
+
+    /* burst particles */
+
+    for(let i=0;i<80;i++){
+
+        const a=Math.random()*Math.PI*2;
+
+        pts.push({
+            a,
+            r:.05+Math.random()*.15,
+            speed:.008+Math.random()*.02,
+            size:1+Math.random()*3,
+            phase:Math.random()*10
+        });
+    }
+
+    /* after several clicks, reveal a message */
+
+    if(clicks===3){
+
+        title.querySelector("span").textContent="WAKE";
+
+        document.querySelector(".kicker").textContent=
+            "YOU FOUND THE SECOND LAYER";
+
+        document.querySelector(".subtitle").textContent=
+            "THE MACHINE HAS NOTICED YOU";
+
+        setTimeout(()=>{
+            title.querySelector("span").textContent="VOID";
+            document.querySelector(".kicker").textContent=
+                "AN OFFLINE EXPERIENCE";
+            document.querySelector(".subtitle").textContent=
+                "MOVE YOUR MOUSE // WAKE THE SYSTEM";
+        },3000);
+    }
+});
+
+/* ---------- STARTUP ---------- */
+
+setTimeout(()=>{
+    document.getElementById("wake").classList.add("hide");
+},2200);
+
+/* ---------- RENDER ---------- */
+
+function render(t){
+
+    drawSpace();
+    drawParticles(t);
+
+    requestAnimationFrame(render);
+}
+
+requestAnimationFrame(render);
+
+</script>
+
+</body>
+</html>
