@@ -2,6 +2,8 @@
 
 > Interactive things to explore, experiment with, and understand.
 
+Website link - https://chethan-d-a.github.io/The-Archive-of-Things
+
 The Archive of Things is an open collection of interactive educational and experimental artifacts.
 
 Sometimes you don't want to read an explanation or work through the equations.
