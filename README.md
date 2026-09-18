@@ -152,7 +152,7 @@ The Archive itself is independent of any particular publication.
 ---
 
 ## Repository Structure
-
+~~~
 The-Archive-of-Things/
 │
 ├── README.md
@@ -172,7 +172,7 @@ The-Archive-of-Things/
 ├── logic/
 ├── philosophy/
 └── miscellaneous/
-
+~~~
 The directory structure provides organization.
 
 The conceptual relationships between artifacts can cross those boundaries.
