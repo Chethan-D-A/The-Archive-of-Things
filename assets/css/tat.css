@@ -254,9 +254,9 @@ body {
     flex-direction: column;
     justify-content: flex-start;
 
-    padding-bottom: 55px;
+    padding-bottom: 72px;
 
-    margin-bottom: 65px;
+    margin-bottom: 34px;
 
     border-bottom: 1px solid var(--bronze);
 }
@@ -357,17 +357,21 @@ body {
 .category-heading {
     display: flex;
 
-    align-items: baseline;
+    align-items: center;
 
-    gap: 22px;
+    gap: 24px;
 
-    margin-bottom: 28px;
+    padding: 24px 26px;
+
+    margin-bottom: 0;
+
+    background: var(--aubergine);
 }
 
 .category-number {
     font-family: monospace;
 
-    font-size: 10px;
+    font-size: 13px;
 
     letter-spacing: 2px;
 
