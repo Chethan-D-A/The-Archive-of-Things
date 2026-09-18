@@ -252,11 +252,11 @@ body {
 
     display: flex;
     flex-direction: column;
-    justify-content: space-between;
+    justify-content: flex-end;
 
     padding-bottom: 70px;
 
-    margin-bottom: 110px;
+    margin-bottom: 90px;
 
     border-bottom: 1px solid var(--bronze);
 }
@@ -431,7 +431,7 @@ body {
 
     color: var(--ivory);
 
-    font-size: clamp(21px, 2.2vw, 29px);
+    font-size: clamp(19px, 1.9vw, 27px);
 
     font-weight: 400;
 
