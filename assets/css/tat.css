@@ -1,0 +1,44 @@
+:root {
+    --black: #0B0B0A;
+    --ivory: #E8E1D5;
+    --brass: #B79A63;
+    --bronze: #786344;
+    --aubergine: #30232F;
+}
+
+* {
+    box-sizing: border-box;
+}
+
+html,
+body {
+    margin: 0;
+    padding: 0;
+    width: 100%;
+    min-height: 100%;
+    background: var(--black);
+    color: var(--ivory);
+}
+
+body {
+    overflow-x: hidden;
+    font-family: Georgia, "Times New Roman", serif;
+}
+
+button,
+a {
+    font: inherit;
+}
+
+a {
+    color: inherit;
+}
+
+button {
+    border: 0;
+}
+
+::selection {
+    background: var(--brass);
+    color: var(--black);
+}
