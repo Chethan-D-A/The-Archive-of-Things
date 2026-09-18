@@ -35,8 +35,8 @@
         x += (targetX - x) * 0.35;
         y += (targetY - y) * 0.35;
 
-        cursor.style.transform =
-            `translate3d(${x}px, ${y}px, 0) translate(-50%, -50%)`;
+        cursor.style.left = `${x}px`;
+        cursor.style.top = `${y}px`;
 
         requestAnimationFrame(animate);
 
@@ -45,29 +45,44 @@
     animate();
 
 
-    const interactiveElements =
-        document.querySelectorAll(
-            "a, button, [role='button']"
-        );
+    function bindInteractiveElements() {
+
+        document
+            .querySelectorAll("a, button, [role='button']")
+            .forEach(element => {
+
+                if (element.dataset.cursorBound) {
+                    return;
+                }
+
+                element.dataset.cursorBound = "true";
 
 
-    interactiveElements.forEach(element => {
+                element.addEventListener(
+                    "mouseenter",
+                    () => {
+                        cursor.classList.add("is-hovering");
+                    }
+                );
 
-        element.addEventListener(
-            "mouseenter",
-            () => {
-                cursor.classList.add("is-hovering");
-            }
-        );
 
-        element.addEventListener(
-            "mouseleave",
-            () => {
-                cursor.classList.remove("is-hovering");
-            }
-        );
+                element.addEventListener(
+                    "mouseleave",
+                    () => {
+                        cursor.classList.remove("is-hovering");
+                    }
+                );
 
-    });
+            });
+
+    }
+
+
+    bindInteractiveElements();
+
+
+    window.initializeArchiveCursor =
+        bindInteractiveElements;
 
 
     window.addEventListener(
