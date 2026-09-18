@@ -736,8 +736,8 @@ body {
 .rad-trigger {
     position: absolute;
 
-    top: 58px;
-    right: 60px;
+    top: 118px;
+    right: 0;
 
     z-index: 8000;
 
@@ -771,16 +771,13 @@ body {
 .rad-trigger:hover {
     color: var(--brass);
 }
-.rad-trigger:hover {
-    color: var(--brass);
-}
 
 
 .rad-panel {
     position: absolute;
 
-    top: 105px;
-    right: 60px;
+    top: 160px;
+    right: 0;
 
     z-index: 8001;
 
@@ -796,8 +793,7 @@ body {
 
     visibility: hidden;
 
-    transform:
-        translateY(-6px);
+    transform: translateY(-6px);
 
     pointer-events: none;
 
@@ -812,8 +808,7 @@ body {
 
     visibility: visible;
 
-    transform:
-        translateY(0);
+    transform: translateY(0);
 
     pointer-events: auto;
 }
@@ -850,58 +845,4 @@ body {
     font-size: 13px;
 
     line-height: 1.7;
-}
-
-.rad-panel.is-open {
-    opacity: 1;
-
-    visibility: visible;
-
-    transform:
-        translateY(0);
-
-    pointer-events: auto;
-}
-
-.rad-panel-title {
-    margin: 0 0 13px;
-
-    color: var(--brass);
-
-    font-family: monospace;
-
-    font-size: 9px;
-
-    letter-spacing: 2px;
-
-    text-transform: uppercase;
-}
-
-.rad-panel-text {
-    margin: 0;
-
-    color: var(--ivory);
-
-    font-family:
-        Arial,
-        Helvetica,
-        sans-serif;
-
-    font-size: 12px;
-
-    line-height: 1.65;
-}
-
-.publications-page .rad-trigger {
-    top: 115px;
-    right: 60px;
-}
-
-@media (max-width: 700px) {
-
-    .rad-trigger,
-    .rad-panel {
-        display: none;
-    }
-
 }
