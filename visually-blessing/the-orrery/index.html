@@ -1,0 +1,2840 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1.0">
+<title>The Orrery</title>
+
+<style>
+*{
+    box-sizing:border-box;
+    margin:0;
+    padding:0;
+}
+
+html,body{
+    width:100%;
+    height:100%;
+    overflow:hidden;
+    background:#020203;
+}
+
+body{
+    user-select:none;
+}
+
+canvas{
+    position:fixed;
+    inset:0;
+    width:100%;
+    height:100%;
+    display:block;
+    cursor:crosshair;
+}
+
+#ui{
+    position:fixed;
+    inset:0;
+    pointer-events:none;
+    color:#E8E1D5;
+    font-family:Arial,Helvetica,sans-serif;
+}
+
+#brand{
+    position:absolute;
+    top:24px;
+    left:28px;
+    font-size:11px;
+    letter-spacing:7px;
+    opacity:.75;
+}
+
+#descriptor{
+    position:absolute;
+    top:45px;
+    left:28px;
+    font-size:7px;
+    letter-spacing:3px;
+    opacity:.24;
+}
+
+#stats{
+    position:absolute;
+    top:24px;
+    right:28px;
+    text-align:right;
+    font-size:8px;
+    line-height:1.8;
+    letter-spacing:2px;
+    opacity:.3;
+}
+
+#tools{
+    position:absolute;
+    left:50%;
+    bottom:48px;
+    transform:translateX(-50%);
+    pointer-events:auto;
+    display:flex;
+    gap:5px;
+    flex-wrap:wrap;
+    justify-content:center;
+    max-width:900px;
+}
+
+.tool{
+    appearance:none;
+    border:1px solid rgba(232,225,213,.13);
+    background:rgba(5,5,6,.48);
+    color:#E8E1D5;
+    padding:8px 10px;
+    min-width:72px;
+    font:8px Arial,sans-serif;
+    letter-spacing:1.7px;
+    cursor:pointer;
+    transition:
+        background .18s,
+        border-color .18s,
+        opacity .18s;
+}
+
+.tool:hover{
+    border-color:rgba(183,154,99,.5);
+}
+
+.tool.active{
+    background:rgba(183,154,99,.16);
+    border-color:rgba(183,154,99,.65);
+}
+
+#instructions{
+    position:absolute;
+    left:50%;
+    bottom:20px;
+    transform:translateX(-50%);
+    white-space:nowrap;
+    font-size:7px;
+    letter-spacing:2px;
+    opacity:.3;
+}
+
+#time{
+    position:absolute;
+    right:28px;
+    bottom:22px;
+    font-size:9px;
+    letter-spacing:2px;
+    opacity:.4;
+}
+
+#event{
+    position:absolute;
+    left:50%;
+    top:50%;
+    transform:translate(-50%,-50%);
+    font-size:9px;
+    letter-spacing:8px;
+    opacity:0;
+    transition:opacity .2s;
+}
+
+#event.show{
+    opacity:.65;
+}
+
+@media(max-width:800px){
+
+    #tools{
+        max-width:95vw;
+        bottom:54px;
+    }
+
+    .tool{
+        min-width:64px;
+        padding:7px 7px;
+        font-size:7px;
+    }
+
+    #instructions{
+        display:none;
+    }
+
+    #stats{
+        top:20px;
+        right:18px;
+    }
+
+    #brand{
+        top:20px;
+        left:18px;
+    }
+}
+</style>
+</head>
+
+<body>
+
+<canvas id="canvas"></canvas>
+
+<div id="ui">
+
+    <div id="brand">THE ORRERY</div>
+
+    <div id="descriptor">
+        A SMALL UNIVERSE / OPEN TO INTERFERENCE
+    </div>
+
+    <div id="stats">
+        WORLDS <span id="worlds">00</span><br>
+        MOONS <span id="moons">00</span><br>
+        MODE <span id="mode">CREATE</span>
+    </div>
+
+    <div id="tools">
+
+        <button class="tool active" data-mode="create">
+            CREATE
+        </button>
+
+        <button class="tool" data-mode="paint">
+            PAINT
+        </button>
+
+        <button class="tool" data-mode="gravity">
+            GRAVITY
+        </button>
+
+        <button class="tool" data-mode="blackhole">
+            BLACK HOLE
+        </button>
+
+        <button class="tool" data-mode="repulse">
+            REPULSE
+        </button>
+
+        <button class="tool" data-mode="explode">
+            EXPLODE
+        </button>
+
+        <button class="tool" data-mode="orbit">
+            ORBIT
+        </button>
+
+        <button class="tool" data-mode="erase">
+            ERASE
+        </button>
+
+        <button class="tool" id="clear">
+            CLEAR
+        </button>
+
+        <button class="tool" id="reset">
+            RESET
+        </button>
+
+    </div>
+
+    <div id="instructions">
+        CLICK / DRAG — USE ACTIVE TOOL &nbsp;·&nbsp;
+        WHEEL — CHANGE TIME &nbsp;·&nbsp;
+        SPACE — PAUSE &nbsp;·&nbsp;
+        1–8 — SPEED
+    </div>
+
+    <div id="time">
+        <span id="speed">1×</span>
+    </div>
+
+    <div id="event"></div>
+
+</div>
+
+
+<script>
+
+/* =========================================================
+   CANVAS
+========================================================= */
+
+const canvas=document.getElementById("canvas");
+
+const ctx=canvas.getContext("2d",{
+    alpha:false,
+    desynchronized:true
+});
+
+let W=innerWidth;
+let H=innerHeight;
+let DPR=1;
+
+function resize(){
+
+    DPR=Math.min(
+        window.devicePixelRatio||1,
+        2
+    );
+
+    W=innerWidth;
+    H=innerHeight;
+
+    canvas.width=Math.floor(W*DPR);
+    canvas.height=Math.floor(H*DPR);
+
+    ctx.setTransform(
+        DPR,0,0,DPR,0,0
+    );
+
+    resetUniverse();
+}
+
+addEventListener("resize",resize);
+
+
+/* =========================================================
+   PALETTE
+========================================================= */
+
+const IVORY="#E8E1D5";
+const BRASS="#B79A63";
+const BRONZE="#786344";
+const AUBERGINE="#30232F";
+const BLACK="#020203";
+
+
+/* =========================================================
+   PHYSICS CONSTANTS
+========================================================= */
+
+/*
+   This is intentionally much stronger than before.
+
+   MU = G * star mass
+
+   At ~250px:
+       orbital speed ≈ sqrt(MU/r)
+
+   This produces visible orbital motion.
+*/
+
+const STAR_MU=240000;
+
+const BODY_G=.00012;
+
+const SOFTENING=35;
+
+
+/* =========================================================
+   TIME
+========================================================= */
+
+const SPEEDS=[
+    .1,
+    .25,
+    .5,
+    1,
+    10,
+    100,
+    1000,
+    10000
+];
+
+let speedIndex=3;
+let timeScale=SPEEDS[speedIndex];
+
+let paused=false;
+
+
+/* =========================================================
+   WORLD
+========================================================= */
+
+const star={
+    x:0,
+    y:0,
+    radius:21
+};
+
+let bodies=[];
+let particles=[];
+let effects=[];
+
+let age=0;
+
+let activeMode="create";
+
+
+/* =========================================================
+   MOUSE
+========================================================= */
+
+const mouse={
+    x:W/2,
+    y:H/2,
+    px:W/2,
+    py:H/2,
+
+    down:false,
+
+    moved:false,
+
+    downX:0,
+    downY:0,
+
+    lastPaint:0
+};
+
+
+/* =========================================================
+   UTILITY
+========================================================= */
+
+function clamp(v,a,b){
+    return Math.max(a,Math.min(b,v));
+}
+
+function rand(a,b){
+    return a+
+        Math.random()*(b-a);
+}
+
+function distance(ax,ay,bx,by){
+    return Math.hypot(
+        bx-ax,
+        by-ay
+    );
+}
+
+function showEvent(text){
+
+    const el=
+        document.getElementById("event");
+
+    el.textContent=text;
+
+    el.classList.add("show");
+
+    clearTimeout(showEvent.timer);
+
+    showEvent.timer=
+        setTimeout(()=>{
+            el.classList.remove("show");
+        },600);
+}
+
+
+/* =========================================================
+   PARTICLES
+========================================================= */
+
+function createParticles(){
+
+    particles=[];
+
+    const radius=
+        Math.min(W,H)*.68;
+
+    for(let i=0;i<1100;i++){
+
+        const a=
+            Math.random()*
+            Math.PI*2;
+
+        const r=
+            Math.pow(
+                Math.random(),
+                .72
+            )*radius;
+
+        particles.push({
+
+            x:
+                star.x+
+                Math.cos(a)*r,
+
+            y:
+                star.y+
+                Math.sin(a)*r*.72,
+
+            vx:
+                -Math.sin(a)*
+                rand(.015,.07),
+
+            vy:
+                Math.cos(a)*
+                rand(.015,.07),
+
+            size:
+                rand(.2,1.1),
+
+            alpha:
+                rand(.035,.18),
+
+            phase:
+                Math.random()*
+                Math.PI*2
+        });
+    }
+}
+
+
+/* =========================================================
+   PLANET
+========================================================= */
+
+const palettes=[
+
+    [IVORY,BRONZE,AUBERGINE],
+
+    [BRASS,BRONZE,AUBERGINE],
+
+    [BRONZE,AUBERGINE,BLACK],
+
+    [BRASS,IVORY,BRONZE],
+
+    [AUBERGINE,BRONZE,BLACK]
+];
+
+
+function makePlanet(
+    x,
+    y,
+    vx,
+    vy,
+    mass,
+    radius
+){
+
+    return{
+
+        x,
+        y,
+
+        vx,
+        vy,
+
+        mass,
+        radius,
+
+        palette:
+            palettes[
+                Math.floor(
+                    Math.random()*
+                    palettes.length
+                )
+            ],
+
+        rotation:
+            Math.random()*
+            Math.PI*2,
+
+        spin:
+            rand(-.006,.006),
+
+        phase:
+            Math.random()*
+            Math.PI*2,
+
+        ring:
+            radius>6 &&
+            Math.random()<.25,
+
+        moon:false,
+
+        trail:[],
+        age:0
+    };
+}
+
+
+/* =========================================================
+   INITIAL SYSTEM
+========================================================= */
+
+function resetUniverse(){
+
+    star.x=W*.5;
+    star.y=H*.5;
+
+    bodies=[];
+    effects=[];
+
+    age=0;
+
+    const s=
+        Math.min(W,H);
+
+    /*
+       Deliberately energetic system.
+    */
+
+    const data=[
+
+        [.12,.00,0,.90,22,5],
+
+        [-.20,.02,0,-.78,35,6],
+
+        [.00,.24,-.72,0,13,3.5],
+
+        [.31,-.05,.06,.66,70,9],
+
+        [-.36,.07,-.04,-.57,27,5.5],
+
+        [.23,.23,-.48,.35,13,3.3]
+
+    ];
+
+    for(const d of data){
+
+        /*
+           Calculate velocities from the
+           actual star field rather than using
+           arbitrary tiny values.
+        */
+
+        const px=
+            star.x+d[0]*s;
+
+        const py=
+            star.y+d[1]*s;
+
+        const r=
+            Math.hypot(
+                px-star.x,
+                py-star.y
+            );
+
+        const orbital=
+            Math.sqrt(
+                STAR_MU/
+                Math.max(r,80)
+            );
+
+        const angle=
+            Math.atan2(
+                py-star.y,
+                px-star.x
+            );
+
+        /*
+           Tangential direction.
+        */
+
+        const tx=
+            -Math.sin(angle);
+
+        const ty=
+            Math.cos(angle);
+
+        bodies.push(
+            makePlanet(
+                px,
+                py,
+
+                tx*
+                    orbital*
+                    (d[3]||1),
+
+                ty*
+                    orbital*
+                    (d[3]||1),
+
+                d[4],
+                d[5]
+            )
+        );
+    }
+
+    createParticles();
+
+    updateUI();
+}
+
+
+/* =========================================================
+   SPEED
+========================================================= */
+
+function setSpeed(index){
+
+    speedIndex=
+        clamp(
+            index,
+            0,
+            SPEEDS.length-1
+        );
+
+    timeScale=
+        SPEEDS[speedIndex];
+
+    paused=false;
+
+    document.getElementById("speed")
+        .textContent=
+        timeScale>=1000
+        ?(timeScale/1000)+"K×"
+        :timeScale+"×";
+}
+
+
+function faster(){
+
+    setSpeed(speedIndex+1);
+}
+
+
+function slower(){
+
+    setSpeed(speedIndex-1);
+}
+
+
+/* =========================================================
+   TOOLS
+========================================================= */
+
+document.querySelectorAll(".tool[data-mode]")
+    .forEach(button=>{
+
+        button.addEventListener(
+            "click",
+            ()=>{
+
+                activeMode=
+                    button.dataset.mode;
+
+                document
+                    .querySelectorAll(
+                        ".tool[data-mode]"
+                    )
+                    .forEach(b=>
+                        b.classList.remove(
+                            "active"
+                        )
+                    );
+
+                button.classList.add("active");
+
+                document.getElementById("mode")
+                    .textContent=
+                    activeMode
+                    .replace(
+                        /^./,
+                        c=>c.toUpperCase()
+                    );
+            }
+        );
+    });
+
+
+document.getElementById("clear")
+    .addEventListener(
+        "click",
+        ()=>{
+
+            bodies=[];
+            effects=[];
+
+            showEvent("CLEARED");
+        }
+    );
+
+
+document.getElementById("reset")
+    .addEventListener(
+        "click",
+        ()=>{
+
+            resetUniverse();
+
+            showEvent("RESET");
+        }
+    );
+
+
+/* =========================================================
+   POINTER
+========================================================= */
+
+addEventListener("pointermove",e=>{
+
+    mouse.px=mouse.x;
+    mouse.py=mouse.y;
+
+    mouse.x=e.clientX;
+    mouse.y=e.clientY;
+
+    if(mouse.down){
+
+        mouse.moved=
+            distance(
+                mouse.x,
+                mouse.y,
+                mouse.downX,
+                mouse.downY
+            )>6;
+
+        /*
+           PAINT continuously creates worlds.
+        */
+
+        if(
+            activeMode==="paint" &&
+            performance.now()-
+            mouse.lastPaint>65
+        ){
+
+            createPlanetAt(
+                mouse.x,
+                mouse.y
+            );
+
+            mouse.lastPaint=
+                performance.now();
+        }
+    }
+});
+
+
+addEventListener("pointerdown",e=>{
+
+    mouse.down=true;
+
+    mouse.moved=false;
+
+    mouse.downX=e.clientX;
+    mouse.downY=e.clientY;
+
+});
+
+
+addEventListener("pointerup",e=>{
+
+    /*
+       Tools that use click.
+    */
+
+    if(!mouse.moved){
+
+        executeTool(
+            e.clientX,
+            e.clientY
+        );
+    }
+
+    mouse.down=false;
+    mouse.moved=false;
+});
+
+
+addEventListener("pointercancel",()=>{
+
+    mouse.down=false;
+    mouse.moved=false;
+
+});
+
+
+/* =========================================================
+   TOOL EXECUTION
+========================================================= */
+
+function executeTool(x,y){
+
+    switch(activeMode){
+
+        case "create":
+            createPlanetAt(x,y);
+            break;
+
+        case "explode":
+            explosion(x,y);
+            break;
+
+        case "orbit":
+            orbitalImpulse(x,y);
+            break;
+
+        case "erase":
+            eraseAt(x,y);
+            break;
+    }
+}
+
+
+/* =========================================================
+   CREATE
+========================================================= */
+
+function createPlanetAt(x,y){
+
+    const dx=x-star.x;
+    const dy=y-star.y;
+
+    const r=
+        Math.max(
+            70,
+            Math.hypot(dx,dy)
+        );
+
+    const angle=
+        Math.atan2(dy,dx);
+
+    const orbital=
+        Math.sqrt(
+            STAR_MU/r
+        );
+
+    const direction=
+        Math.random()<.5
+        ?1
+        :-1;
+
+    const speed=
+        orbital*
+        rand(.72,1.28);
+
+    const mass=
+        rand(7,32);
+
+    const radius=
+        2.8+
+        Math.sqrt(mass)*.65;
+
+    bodies.push(
+
+        makePlanet(
+
+            x,
+            y,
+
+            -Math.sin(angle)*
+                speed*
+                direction,
+
+            Math.cos(angle)*
+                speed*
+                direction,
+
+            mass,
+            radius
+        )
+    );
+
+    effects.push({
+
+        type:"birth",
+
+        x,
+        y,
+
+        r:2,
+
+        max:55,
+
+        life:1
+    });
+
+    showEvent("NEW WORLD");
+}
+
+
+/* =========================================================
+   GRAVITY
+========================================================= */
+
+function applyGravityTool(){
+
+    if(!mouse.down || !mouse.moved)
+        return;
+
+    const x=mouse.x;
+    const y=mouse.y;
+
+    const dxMove=
+        mouse.x-mouse.px;
+
+    const dyMove=
+        mouse.y-mouse.py;
+
+    /*
+       Different tools have different strengths.
+    */
+
+    let strength=0;
+
+    if(activeMode==="gravity")
+        strength=95000;
+
+    if(activeMode==="blackhole")
+        strength=450000;
+
+    if(activeMode==="repulse")
+        strength=-120000;
+
+    if(!strength)
+        return;
+
+
+    for(const b of bodies){
+
+        let dx=x-b.x;
+        let dy=y-b.y;
+
+        const r2=
+            dx*dx+
+            dy*dy+
+            500;
+
+        const r=
+            Math.sqrt(r2);
+
+        /*
+           Strong inverse-square field.
+        */
+
+        const force=
+            strength/
+            r2;
+
+        b.vx+=
+            dx/r*
+            force;
+
+        b.vy+=
+            dy/r*
+            force;
+    }
+
+
+    /*
+       The cursor also has visible motion trails.
+    */
+
+    effects.push({
+
+        type:
+            activeMode,
+
+        x,
+        y,
+
+        dx:dxMove,
+        dy:dyMove,
+
+        r:
+            activeMode==="blackhole"
+            ?75
+            :55,
+
+        life:1
+    });
+}
+
+
+/* =========================================================
+   EXPLOSION
+========================================================= */
+
+function explosion(x,y){
+
+    const radius=260;
+
+    for(const b of bodies){
+
+        const dx=b.x-x;
+        const dy=b.y-y;
+
+        const r=
+            Math.max(
+                20,
+                Math.hypot(dx,dy)
+            );
+
+        if(r>radius)
+            continue;
+
+        const power=
+            (1-r/radius)*
+            5;
+
+        b.vx+=
+            dx/r*
+            power;
+
+        b.vy+=
+            dy/r*
+            power;
+    }
+
+
+    /*
+       Explosion particles.
+    */
+
+    for(let i=0;i<55;i++){
+
+        const a=
+            Math.random()*
+            Math.PI*2;
+
+        const r=
+            Math.random()*12;
+
+        effects.push({
+
+            type:"debris",
+
+            x:x+
+                Math.cos(a)*r,
+
+            y:y+
+                Math.sin(a)*r,
+
+            vx:
+                Math.cos(a)*
+                rand(1,5),
+
+            vy:
+                Math.sin(a)*
+                rand(1,5),
+
+            r:1+
+                Math.random()*2,
+
+            life:1
+        });
+    }
+
+    effects.push({
+
+        type:"explosion",
+
+        x,
+        y,
+
+        r:5,
+
+        max:radius*.65,
+
+        life:1
+    });
+
+    showEvent("EXPLOSION");
+}
+
+
+/* =========================================================
+   ORBITAL IMPULSE
+========================================================= */
+
+function orbitalImpulse(x,y){
+
+    const radius=220;
+
+    for(const b of bodies){
+
+        const dx=b.x-x;
+        const dy=b.y-y;
+
+        const r=
+            Math.max(
+                20,
+                Math.hypot(dx,dy)
+            );
+
+        if(r>radius)
+            continue;
+
+        const influence=
+            1-r/radius;
+
+        /*
+           Rotate velocity by injecting
+           tangential momentum.
+        */
+
+        const tx=-dy/r;
+        const ty=dx/r;
+
+        const amount=
+            influence*
+            4.5;
+
+        b.vx+=tx*amount;
+        b.vy+=ty*amount;
+    }
+
+    effects.push({
+
+        type:"orbit",
+
+        x,
+        y,
+
+        r:5,
+
+        max:radius,
+
+        life:1
+    });
+
+    showEvent("ORBITAL IMPULSE");
+}
+
+
+/* =========================================================
+   ERASE
+========================================================= */
+
+function eraseAt(x,y){
+
+    let closest=-1;
+    let best=Infinity;
+
+    for(let i=0;i<bodies.length;i++){
+
+        const b=bodies[i];
+
+        const d=
+            distance(
+                x,y,
+                b.x,b.y
+            );
+
+        if(
+            d<
+            Math.max(
+                30,
+                b.radius*3
+            ) &&
+            d<best
+        ){
+
+            best=d;
+            closest=i;
+        }
+    }
+
+    if(closest>=0){
+
+        const b=bodies[closest];
+
+        effects.push({
+
+            type:"erase",
+
+            x:b.x,
+            y:b.y,
+
+            r:2,
+
+            max:45,
+
+            life:1
+        });
+
+        bodies.splice(
+            closest,
+            1
+        );
+
+        showEvent("DESTROYED");
+    }
+}
+
+
+/* =========================================================
+   BODY GRAVITY
+========================================================= */
+
+function bodyGravity(dt){
+
+    for(let i=0;i<bodies.length;i++){
+
+        const a=bodies[i];
+
+        for(let j=i+1;j<bodies.length;j++){
+
+            const b=bodies[j];
+
+            const dx=b.x-a.x;
+            const dy=b.y-a.y;
+
+            const r2=
+                dx*dx+
+                dy*dy+
+                SOFTENING*SOFTENING;
+
+            const r=
+                Math.sqrt(r2);
+
+            const force=
+                BODY_G*
+                a.mass*
+                b.mass/
+                r2;
+
+            a.vx+=
+                dx/r*
+                force/a.mass*
+                dt;
+
+            a.vy+=
+                dy/r*
+                force/a.mass*
+                dt;
+
+            b.vx-=
+                dx/r*
+                force/b.mass*
+                dt;
+
+            b.vy-=
+                dy/r*
+                force/b.mass*
+                dt;
+        }
+    }
+}
+
+
+/* =========================================================
+   STAR GRAVITY
+========================================================= */
+
+function starGravity(dt){
+
+    for(const b of bodies){
+
+        const dx=
+            star.x-b.x;
+
+        const dy=
+            star.y-b.y;
+
+        const r2=
+            dx*dx+
+            dy*dy+
+            80*80;
+
+        const r=
+            Math.sqrt(r2);
+
+        /*
+           THIS is the primary solar gravity.
+
+           Acceleration:
+               a = MU / r²
+        */
+
+        const acceleration=
+            STAR_MU/r2;
+
+        b.vx+=
+            dx/r*
+            acceleration*
+            dt;
+
+        b.vy+=
+            dy/r*
+            acceleration*
+            dt;
+    }
+}
+
+
+/* =========================================================
+   INTEGRATION
+========================================================= */
+
+function integrate(dt){
+
+    for(const b of bodies){
+
+        b.x+=b.vx*dt;
+        b.y+=b.vy*dt;
+
+        b.age+=dt;
+
+        b.rotation+=
+            b.spin*dt;
+
+
+        /*
+           Trail.
+        */
+
+        if(
+            b.trail.length===0 ||
+            distance(
+                b.x,
+                b.y,
+                b.trail[
+                    b.trail.length-1
+                ].x,
+                b.trail[
+                    b.trail.length-1
+                ].y
+            )>3
+        ){
+
+            b.trail.push({
+                x:b.x,
+                y:b.y
+            });
+
+            if(b.trail.length>70)
+                b.trail.shift();
+        }
+    }
+}
+
+
+/* =========================================================
+   COLLISIONS
+========================================================= */
+
+function collisions(){
+
+    for(
+        let i=bodies.length-1;
+        i>=0;
+        i--
+    ){
+
+        for(
+            let j=i-1;
+            j>=0;
+            j--
+        ){
+
+            const a=bodies[i];
+            const b=bodies[j];
+
+            const d=
+                distance(
+                    a.x,a.y,
+                    b.x,b.y
+                );
+
+            if(
+                d<
+                (a.radius+b.radius)*.82
+            ){
+
+                merge(i,j);
+
+                break;
+            }
+        }
+    }
+}
+
+
+function merge(i,j){
+
+    const a=bodies[i];
+    const b=bodies[j];
+
+    const total=
+        a.mass+b.mass;
+
+    const x=
+        (
+            a.x*a.mass+
+            b.x*b.mass
+        )/total;
+
+    const y=
+        (
+            a.y*a.mass+
+            b.y*b.mass
+        )/total;
+
+    const vx=
+        (
+            a.vx*a.mass+
+            b.vx*b.mass
+        )/total;
+
+    const vy=
+        (
+            a.vy*a.mass+
+            b.vy*b.mass
+        )/total;
+
+    const energy=
+        Math.hypot(
+            a.vx-b.vx,
+            a.vy-b.vy
+        );
+
+    const survivor=
+        a.mass>=b.mass
+        ?a
+        :b;
+
+    survivor.x=x;
+    survivor.y=y;
+
+    survivor.vx=vx;
+    survivor.vy=vy;
+
+    survivor.mass=total;
+
+    survivor.radius=
+        Math.min(
+            28,
+            Math.sqrt(
+                a.radius*a.radius+
+                b.radius*b.radius
+            )
+        );
+
+    survivor.ring=
+        survivor.ring||
+        total>45;
+
+
+    effects.push({
+
+        type:"collision",
+
+        x,
+        y,
+
+        r:2,
+
+        max:
+            clamp(
+                35+
+                energy*20+
+                total*.3,
+                35,
+                150
+            ),
+
+        life:1
+    });
+
+
+    /*
+       Debris.
+    */
+
+    for(let k=0;k<12;k++){
+
+        const angle=
+            Math.random()*
+            Math.PI*2;
+
+        const s=
+            rand(.5,2)+
+            energy*.25;
+
+        effects.push({
+
+            type:"debris",
+
+            x,
+            y,
+
+            vx:
+                Math.cos(angle)*s,
+
+            vy:
+                Math.sin(angle)*s,
+
+            r:
+                rand(.5,1.8),
+
+            life:1
+        });
+    }
+
+
+    /*
+       Remove smaller object.
+    */
+
+    const remove=
+        survivor===a
+        ?j
+        :i;
+
+    bodies.splice(
+        remove,
+        1
+    );
+
+    showEvent("COLLISION");
+}
+
+
+/* =========================================================
+   STAR ABSORPTION
+========================================================= */
+
+function absorb(){
+
+    for(
+        let i=bodies.length-1;
+        i>=0;
+        i--
+    ){
+
+        const b=bodies[i];
+
+        const d=
+            distance(
+                b.x,b.y,
+                star.x,star.y
+            );
+
+        if(
+            d<
+            star.radius+
+            b.radius*.45
+        ){
+
+            effects.push({
+
+                type:"star",
+
+                x:b.x,
+                y:b.y,
+
+                r:4,
+
+                max:100,
+
+                life:1
+            });
+
+            bodies.splice(i,1);
+
+            showEvent("ABSORBED");
+        }
+    }
+}
+
+
+/* =========================================================
+   PARTICLE PHYSICS
+========================================================= */
+
+function particlePhysics(dt){
+
+    for(const p of particles){
+
+        const dx=
+            star.x-p.x;
+
+        const dy=
+            star.y-p.y;
+
+        const r2=
+            dx*dx+
+            dy*dy+
+            3000;
+
+        const r=
+            Math.sqrt(r2);
+
+        const force=
+            STAR_MU/
+            r2;
+
+        p.vx+=
+            dx/r*
+            force*
+            dt*
+            .06;
+
+        p.vy+=
+            dy/r*
+            force*
+            dt*
+            .06;
+
+
+        /*
+           Orbital curl.
+        */
+
+        p.vx+=
+            -dy/r*
+            .0008*
+            dt;
+
+        p.vy+=
+            dx/r*
+            .0008*
+            dt;
+
+
+        /*
+           Tool field also affects dust.
+        */
+
+        if(
+            mouse.down &&
+            mouse.moved &&
+            (
+                activeMode==="gravity"||
+                activeMode==="blackhole"||
+                activeMode==="repulse"
+            )
+        ){
+
+            let dx2=
+                mouse.x-p.x;
+
+            let dy2=
+                mouse.y-p.y;
+
+            const rr2=
+                dx2*dx2+
+                dy2*dy2+
+                1000;
+
+            const rr=
+                Math.sqrt(rr2);
+
+            let strength=
+                activeMode==="blackhole"
+                ?500000
+                :activeMode==="gravity"
+                ?100000
+                :-140000;
+
+            const f=
+                strength/rr2;
+
+            p.vx+=
+                dx2/rr*f*dt;
+
+            p.vy+=
+                dy2/rr*f*dt;
+        }
+
+        p.x+=p.vx*dt;
+        p.y+=p.vy*dt;
+
+
+        /*
+           Recycle.
+        */
+
+        if(
+            p.x<-250||
+            p.x>W+250||
+            p.y<-250||
+            p.y>H+250
+        ){
+
+            const a=
+                Math.random()*
+                Math.PI*2;
+
+            const r0=
+                Math.min(W,H)*
+                rand(.35,.58);
+
+            p.x=
+                star.x+
+                Math.cos(a)*r0;
+
+            p.y=
+                star.y+
+                Math.sin(a)*r0*.72;
+
+            p.vx=
+                -Math.sin(a)*.02;
+
+            p.vy=
+                Math.cos(a)*.02;
+        }
+    }
+}
+
+
+/* =========================================================
+   EFFECT PHYSICS
+========================================================= */
+
+function effectPhysics(dt){
+
+    for(
+        let i=effects.length-1;
+        i>=0;
+        i--
+    ){
+
+        const e=effects[i];
+
+        e.life*=
+            e.type==="debris"
+            ?.94
+            :.955;
+
+        if(e.type==="debris"){
+
+            e.x+=e.vx*dt;
+            e.y+=e.vy*dt;
+
+            e.vx*=.985;
+            e.vy*=.985;
+        }
+
+        if(e.type==="birth")
+            e.r+=(e.max-e.r)*.13;
+
+        if(
+            e.type==="collision"||
+            e.type==="explosion"||
+            e.type==="star"||
+            e.type==="erase"||
+            e.type==="orbit"
+        ){
+
+            e.r+=(e.max-e.r)*.12;
+        }
+
+        if(e.life<.015){
+
+            effects.splice(i,1);
+        }
+    }
+}
+
+
+/* =========================================================
+   BACKGROUND
+========================================================= */
+
+function drawBackground(){
+
+    ctx.fillStyle=BLACK;
+
+    ctx.fillRect(
+        0,
+        0,
+        W,
+        H
+    );
+
+    const g=
+        ctx.createRadialGradient(
+            star.x,
+            star.y,
+            0,
+            star.x,
+            star.y,
+            Math.max(W,H)*.75
+        );
+
+    g.addColorStop(
+        0,
+        "rgba(48,35,47,.58)"
+    );
+
+    g.addColorStop(
+        .3,
+        "rgba(16,12,18,.75)"
+    );
+
+    g.addColorStop(
+        1,
+        "rgba(0,0,1,1)"
+    );
+
+    ctx.fillStyle=g;
+
+    ctx.fillRect(
+        0,
+        0,
+        W,
+        H
+    );
+}
+
+
+/* =========================================================
+   PARTICLES
+========================================================= */
+
+function drawParticles(){
+
+    ctx.save();
+
+    for(const p of particles){
+
+        const twinkle=
+            .65+
+            .35*
+            Math.sin(
+                age*.03+
+                p.phase
+            );
+
+        ctx.globalAlpha=
+            p.alpha*
+            twinkle;
+
+        ctx.fillStyle=IVORY;
+
+        ctx.beginPath();
+
+        ctx.arc(
+            p.x,
+            p.y,
+            p.size,
+            0,
+            Math.PI*2
+        );
+
+        ctx.fill();
+    }
+
+    ctx.restore();
+}
+
+
+/* =========================================================
+   ORBITS
+========================================================= */
+
+function drawOrbits(){
+
+    ctx.save();
+
+    ctx.strokeStyle=BRONZE;
+    ctx.lineWidth=.7;
+    ctx.globalAlpha=.055;
+
+    for(const b of bodies){
+
+        if(b.moon)
+            continue;
+
+        const r=
+            distance(
+                b.x,b.y,
+                star.x,star.y
+            );
+
+        if(r<60)
+            continue;
+
+        const a=
+            Math.atan2(
+                b.y-star.y,
+                b.x-star.x
+            );
+
+        ctx.beginPath();
+
+        ctx.ellipse(
+            star.x,
+            star.y,
+            r,
+            r*.72,
+            a,
+            0,
+            Math.PI*2
+        );
+
+        ctx.stroke();
+    }
+
+    ctx.restore();
+}
+
+
+/* =========================================================
+   TRAILS
+========================================================= */
+
+function drawTrails(){
+
+    for(const b of bodies){
+
+        if(b.trail.length<2)
+            continue;
+
+        ctx.save();
+
+        ctx.strokeStyle=
+            b.mass>45
+            ?BRASS
+            :IVORY;
+
+        ctx.lineWidth=
+            b.moon
+            ?.55
+            :Math.min(
+                1.8,
+                b.radius*.14
+            );
+
+        ctx.globalAlpha=
+            b.moon
+            ?.10
+            :.16;
+
+        ctx.beginPath();
+
+        ctx.moveTo(
+            b.trail[0].x,
+            b.trail[0].y
+        );
+
+        for(
+            let i=1;
+            i<b.trail.length;
+            i++
+        ){
+
+            ctx.lineTo(
+                b.trail[i].x,
+                b.trail[i].y
+            );
+        }
+
+        ctx.stroke();
+
+        ctx.restore();
+    }
+}
+
+
+/* =========================================================
+   PLANET
+========================================================= */
+
+function drawPlanet(b){
+
+    const r=b.radius;
+
+
+    /*
+       Glow.
+    */
+
+    const glow=
+        ctx.createRadialGradient(
+            b.x,
+            b.y,
+            0,
+            b.x,
+            b.y,
+            r*7
+        );
+
+    glow.addColorStop(
+        0,
+        b.mass>45
+        ?"rgba(183,154,99,.18)"
+        :"rgba(232,225,213,.09)"
+    );
+
+    glow.addColorStop(
+        .3,
+        "rgba(48,35,47,.08)"
+    );
+
+    glow.addColorStop(
+        1,
+        "rgba(0,0,0,0)"
+    );
+
+    ctx.fillStyle=glow;
+
+    ctx.fillRect(
+        b.x-r*7,
+        b.y-r*7,
+        r*14,
+        r*14
+    );
+
+
+    ctx.save();
+
+
+    /*
+       Rings.
+    */
+
+    if(b.ring){
+
+        ctx.globalAlpha=.30;
+
+        ctx.strokeStyle=BRASS;
+        ctx.lineWidth=.7;
+
+        ctx.beginPath();
+
+        ctx.ellipse(
+            b.x,
+            b.y,
+            r*2.4,
+            r*.67,
+            b.rotation,
+            0,
+            Math.PI*2
+        );
+
+        ctx.stroke();
+
+        ctx.globalAlpha=.11;
+
+        ctx.beginPath();
+
+        ctx.ellipse(
+            b.x,
+            b.y,
+            r*3,
+            r*.85,
+            b.rotation,
+            0,
+            Math.PI*2
+        );
+
+        ctx.stroke();
+    }
+
+
+    /*
+       Surface.
+    */
+
+    const g=
+        ctx.createRadialGradient(
+            b.x-r*.35,
+            b.y-r*.42,
+            r*.05,
+            b.x,
+            b.y,
+            r
+        );
+
+    g.addColorStop(
+        0,
+        b.palette[0]
+    );
+
+    g.addColorStop(
+        .48,
+        b.palette[1]
+    );
+
+    g.addColorStop(
+        1,
+        b.palette[2]
+    );
+
+    ctx.fillStyle=g;
+
+    ctx.beginPath();
+
+    ctx.arc(
+        b.x,
+        b.y,
+        r,
+        0,
+        Math.PI*2
+    );
+
+    ctx.fill();
+
+
+    /*
+       Shadow.
+    */
+
+    const shadow=
+        ctx.createRadialGradient(
+            b.x+r*.42,
+            b.y+r*.42,
+            0,
+            b.x+r*.42,
+            b.y+r*.42,
+            r*1.15
+        );
+
+    shadow.addColorStop(
+        0,
+        "rgba(0,0,0,.7)"
+    );
+
+    shadow.addColorStop(
+        1,
+        "rgba(0,0,0,0)"
+    );
+
+    ctx.fillStyle=shadow;
+
+    ctx.beginPath();
+
+    ctx.arc(
+        b.x,
+        b.y,
+        r,
+        0,
+        Math.PI*2
+    );
+
+    ctx.fill();
+
+
+    /*
+       Rim.
+    */
+
+    ctx.globalAlpha=.48;
+
+    ctx.strokeStyle=IVORY;
+    ctx.lineWidth=.55;
+
+    ctx.beginPath();
+
+    ctx.arc(
+        b.x,
+        b.y,
+        r,
+        0,
+        Math.PI*2
+    );
+
+    ctx.stroke();
+
+
+    ctx.restore();
+}
+
+
+/* =========================================================
+   STAR
+========================================================= */
+
+function drawStar(){
+
+    const pulse=
+        1+
+        Math.sin(age*.035)*.035;
+
+    const r=
+        star.radius*
+        pulse;
+
+
+    /*
+       Solar bloom.
+    */
+
+    const g=
+        ctx.createRadialGradient(
+            star.x,
+            star.y,
+            0,
+            star.x,
+            star.y,
+            r*12
+        );
+
+    g.addColorStop(
+        0,
+        "rgba(232,225,213,.40)"
+    );
+
+    g.addColorStop(
+        .04,
+        "rgba(183,154,99,.27)"
+    );
+
+    g.addColorStop(
+        .16,
+        "rgba(183,154,99,.11)"
+    );
+
+    g.addColorStop(
+        1,
+        "rgba(0,0,0,0)"
+    );
+
+    ctx.fillStyle=g;
+
+    ctx.fillRect(
+        star.x-r*12,
+        star.y-r*12,
+        r*24,
+        r*24
+    );
+
+
+    ctx.save();
+
+    /*
+       Corona rings.
+    */
+
+    ctx.strokeStyle=BRASS;
+    ctx.lineWidth=.8;
+    ctx.globalAlpha=.22;
+
+    for(let i=0;i<4;i++){
+
+        const rr=
+            r*
+            (1.5+i*.75)+
+            Math.sin(
+                age*.035+i
+            )*1.3;
+
+        ctx.beginPath();
+
+        ctx.arc(
+            star.x,
+            star.y,
+            rr,
+            0,
+            Math.PI*2
+        );
+
+        ctx.stroke();
+    }
+
+
+    /*
+       Star itself.
+    */
+
+    ctx.globalAlpha=.98;
+
+    ctx.fillStyle=IVORY;
+
+    ctx.beginPath();
+
+    ctx.arc(
+        star.x,
+        star.y,
+        r,
+        0,
+        Math.PI*2
+    );
+
+    ctx.fill();
+
+    ctx.restore();
+}
+
+
+/* =========================================================
+   TOOL VISUAL
+========================================================= */
+
+function drawToolField(){
+
+    if(!mouse.down || !mouse.moved)
+        return;
+
+    if(
+        activeMode!=="gravity" &&
+        activeMode!=="blackhole" &&
+        activeMode!=="repulse"
+    )
+        return;
+
+    const radius=
+        activeMode==="blackhole"
+        ?95
+        :75;
+
+    const g=
+        ctx.createRadialGradient(
+            mouse.x,
+            mouse.y,
+            0,
+            mouse.x,
+            mouse.y,
+            radius*2
+        );
+
+    g.addColorStop(
+        0,
+        activeMode==="repulse"
+        ?"rgba(232,225,213,.10)"
+        :"rgba(183,154,99,.18)"
+    );
+
+    g.addColorStop(
+        .3,
+        "rgba(48,35,47,.11)"
+    );
+
+    g.addColorStop(
+        1,
+        "rgba(0,0,0,0)"
+    );
+
+    ctx.fillStyle=g;
+
+    ctx.fillRect(
+        mouse.x-radius*2,
+        mouse.y-radius*2,
+        radius*4,
+        radius*4
+    );
+
+
+    ctx.save();
+
+    ctx.strokeStyle=
+        activeMode==="blackhole"
+        ?IVORY
+        :BRASS;
+
+    ctx.lineWidth=.8;
+    ctx.globalAlpha=.45;
+
+    for(let i=0;i<5;i++){
+
+        const rr=
+            radius*
+            (.25+i*.18);
+
+        ctx.beginPath();
+
+        ctx.ellipse(
+            mouse.x,
+            mouse.y,
+            rr,
+            rr*.62,
+            age*.002,
+            0,
+            Math.PI*2
+        );
+
+        ctx.stroke();
+    }
+
+    ctx.restore();
+}
+
+
+/* =========================================================
+   EFFECTS
+========================================================= */
+
+function drawEffects(){
+
+    for(const e of effects){
+
+        ctx.save();
+
+        ctx.globalAlpha=e.life;
+
+        if(e.type==="debris"){
+
+            ctx.fillStyle=BRASS;
+
+            ctx.beginPath();
+
+            ctx.arc(
+                e.x,
+                e.y,
+                e.r,
+                0,
+                Math.PI*2
+            );
+
+            ctx.fill();
+
+        }else{
+
+            ctx.strokeStyle=
+                e.type==="star"
+                ?IVORY
+                :BRASS;
+
+            ctx.lineWidth=
+                e.type==="explosion"
+                ?1.4
+                :1;
+
+            ctx.beginPath();
+
+            ctx.arc(
+                e.x,
+                e.y,
+                e.r,
+                0,
+                Math.PI*2
+            );
+
+            ctx.stroke();
+
+            if(
+                e.type==="blackhole"||
+                e.type==="gravity"||
+                e.type==="repulse"
+            ){
+
+                ctx.globalAlpha*=.3;
+
+                ctx.beginPath();
+
+                ctx.arc(
+                    e.x,
+                    e.y,
+                    e.r*1.8,
+                    0,
+                    Math.PI*2
+                );
+
+                ctx.stroke();
+            }
+        }
+
+        ctx.restore();
+    }
+}
+
+
+/* =========================================================
+   VIGNETTE
+========================================================= */
+
+function vignette(){
+
+    const g=
+        ctx.createRadialGradient(
+            W*.5,
+            H*.5,
+            Math.min(W,H)*.15,
+            W*.5,
+            H*.5,
+            Math.max(W,H)*.8
+        );
+
+    g.addColorStop(
+        0,
+        "rgba(0,0,0,0)"
+    );
+
+    g.addColorStop(
+        .58,
+        "rgba(0,0,0,.08)"
+    );
+
+    g.addColorStop(
+        .78,
+        "rgba(0,0,0,.32)"
+    );
+
+    g.addColorStop(
+        1,
+        "rgba(0,0,0,.9)"
+    );
+
+    ctx.fillStyle=g;
+
+    ctx.fillRect(
+        0,
+        0,
+        W,
+        H
+    );
+}
+
+
+/* =========================================================
+   UI
+========================================================= */
+
+function updateUI(){
+
+    let worlds=0;
+    let moons=0;
+
+    for(const b of bodies){
+
+        if(b.moon)
+            moons++;
+        else
+            worlds++;
+    }
+
+    document.getElementById("worlds")
+        .textContent=
+        String(worlds)
+        .padStart(2,"0");
+
+    document.getElementById("moons")
+        .textContent=
+        String(moons)
+        .padStart(2,"0");
+}
+
+
+/* =========================================================
+   SIMULATION
+========================================================= */
+
+function simulate(realDelta){
+
+    if(paused)
+        return;
+
+    /*
+       We deliberately permit enormous time multipliers.
+
+       At ordinary speeds we use many tiny steps.
+
+       At extreme speeds we use fewer larger
+       semi-implicit steps. This sacrifices some
+       microscopic accuracy in exchange for actually
+       seeing 1,000× / 10,000× time pass.
+    */
+
+    const virtualTime=
+        realDelta*
+        timeScale;
+
+    let steps;
+
+    if(timeScale<=1){
+
+        steps=4;
+
+    }else if(timeScale<=10){
+
+        steps=12;
+
+    }else if(timeScale<=100){
+
+        steps=24;
+
+    }else if(timeScale<=1000){
+
+        steps=48;
+
+    }else{
+
+        steps=80;
+    }
+
+    const dt=
+        virtualTime/
+        steps;
+
+    /*
+       Player gravity is applied each simulation step.
+    */
+
+    for(let i=0;i<steps;i++){
+
+        starGravity(dt);
+
+        bodyGravity(dt);
+
+        applyGravityTool();
+
+        integrate(dt);
+
+        particlePhysics(dt);
+
+        collisions();
+
+        absorb();
+
+        effectPhysics(dt);
+    }
+
+    age+=virtualTime*60;
+}
+
+
+/* =========================================================
+   RENDER
+========================================================= */
+
+function render(){
+
+    drawBackground();
+
+    drawParticles();
+
+    drawOrbits();
+
+    drawTrails();
+
+    /*
+       Bodies.
+    */
+
+    for(const b of bodies)
+        drawPlanet(b);
+
+    drawStar();
+
+    drawEffects();
+
+    drawToolField();
+
+    vignette();
+
+    updateUI();
+}
+
+
+/* =========================================================
+   KEYBOARD
+========================================================= */
+
+addEventListener("keydown",e=>{
+
+    /*
+       1–8 = direct speed selection.
+    */
+
+    if(
+        e.key>="1" &&
+        e.key<="8"
+    ){
+
+        setSpeed(
+            Number(e.key)-1
+        );
+    }
+
+
+    /*
+       Space.
+    */
+
+    if(e.code==="Space"){
+
+        e.preventDefault();
+
+        paused=!paused;
+
+        document.getElementById("time")
+            .textContent=
+            paused
+            ?"PAUSED"
+            :
+            (
+                timeScale>=1000
+                ?(timeScale/1000)+"K×"
+                :timeScale+"×"
+            );
+    }
+
+
+    /*
+       Number keys also select tools
+       through letter shortcuts.
+    */
+
+    const shortcuts={
+
+        c:"create",
+        p:"paint",
+        g:"gravity",
+        b:"blackhole",
+        r:"repulse",
+        x:"explode",
+        o:"orbit",
+        e:"erase"
+    };
+
+    const key=e.key.toLowerCase();
+
+    if(shortcuts[key]){
+
+        activeMode=
+            shortcuts[key];
+
+        document
+            .querySelectorAll(
+                ".tool[data-mode]"
+            )
+            .forEach(button=>{
+
+                button.classList.toggle(
+                    "active",
+                    button.dataset.mode===
+                    activeMode
+                );
+            });
+
+        document.getElementById("mode")
+            .textContent=
+            activeMode
+            .replace(
+                /^./,
+                c=>c.toUpperCase()
+            );
+    }
+
+});
+
+
+/* =========================================================
+   WHEEL SPEED
+========================================================= */
+
+addEventListener("wheel",e=>{
+
+    if(e.deltaY<0)
+        faster();
+    else
+        slower();
+
+    document.getElementById("time")
+        .textContent=
+        timeScale>=1000
+        ?(timeScale/1000)+"K×"
+        :timeScale+"×";
+
+});
+
+
+/* =========================================================
+   MAIN LOOP
+========================================================= */
+
+let previous=performance.now();
+
+function frame(now){
+
+    const realDelta=
+        Math.min(
+            (now-previous)/1000,
+            .033
+        );
+
+    previous=now;
+
+    simulate(realDelta);
+
+    render();
+
+    requestAnimationFrame(frame);
+}
+
+
+/* =========================================================
+   START
+========================================================= */
+
+resize();
+
+requestAnimationFrame(frame);
+
+</script>
+
+</body>
+</html>
