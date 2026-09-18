@@ -262,6 +262,8 @@ body {
 }
 
 .home-top {
+    position: relative;
+    
     display: flex;
 
     align-items: flex-start;
@@ -736,12 +738,12 @@ body {
 .rad-trigger {
     position: absolute;
 
-    top: 118px;
+    top: calc(100% + 8px);
     right: 0;
 
     z-index: 8000;
 
-    padding: 8px 0;
+    padding: 7px 0;
 
     background: transparent;
 
@@ -754,7 +756,7 @@ body {
         Helvetica,
         sans-serif;
 
-    font-size: 11px;
+    font-size: 12px;
 
     font-weight: 500;
 
@@ -772,11 +774,14 @@ body {
     color: var(--brass);
 }
 
+.rad-trigger:hover {
+    color: var(--brass);
+}
 
 .rad-panel {
     position: absolute;
 
-    top: 160px;
+    top: 170px;
     right: 0;
 
     z-index: 8001;
@@ -801,6 +806,16 @@ body {
         opacity 300ms ease,
         transform 400ms cubic-bezier(.16, 1, .3, 1),
         visibility 300ms ease;
+}
+
+.rad-panel.is-open {
+    opacity: 1;
+
+    visibility: visible;
+
+    transform: translateY(0);
+
+    pointer-events: auto;
 }
 
 .rad-panel.is-open {
