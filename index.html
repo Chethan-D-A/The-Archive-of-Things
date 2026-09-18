@@ -133,6 +133,7 @@ footer{
 }
 
 @media(max-width:600px){
+
     main{
         width:min(100% - 28px,1100px);
         padding:50px 0;
@@ -143,6 +144,7 @@ footer{
         flex-direction:column;
         gap:15px;
     }
+
 }
 </style>
 </head>
@@ -152,7 +154,10 @@ footer{
 <main>
 
 <header>
-    <div class="eyebrow">THE ARCHIVE OF THINGS</div>
+
+    <div class="eyebrow">
+        THE ARCHIVE OF THINGS
+    </div>
 
     <h1>
         Things to explore,<br>
@@ -165,10 +170,15 @@ footer{
         ideas tangible. Explore them, manipulate them, and see
         what happens.
     </div>
+
 </header>
 
 <div id="archive">
-    <div class="status">INDEXING ARCHIVE...</div>
+
+    <div class="status">
+        INDEXING ARCHIVE...
+    </div>
+
 </div>
 
 <footer>
@@ -185,19 +195,33 @@ const BRANCH = "main";
 
 const archive = document.getElementById("archive");
 
+
+/* ================================
+   GITHUB API
+================================ */
+
 async function getContents(path=""){
 
     const url =
         `https://api.github.com/repos/${OWNER}/${REPO}/contents/${path}?ref=${BRANCH}`;
 
-    const response = await fetch(url);
+    const response =
+        await fetch(url);
 
     if(!response.ok){
-        throw new Error(`GitHub API error: ${response.status}`);
+        throw new Error(
+            `GitHub API error: ${response.status}`
+        );
     }
 
     return response.json();
+
 }
+
+
+/* ================================
+   HELPERS
+================================ */
 
 function titleCase(text){
 
@@ -207,9 +231,10 @@ function titleCase(text){
 
 }
 
+
 function escapeHTML(text){
 
-    return text
+    return String(text)
         .replace(/&/g,"&amp;")
         .replace(/</g,"&lt;")
         .replace(/>/g,"&gt;")
@@ -218,58 +243,125 @@ function escapeHTML(text){
 
 }
 
+
+/* ================================
+   FIND INTERACTIVES
+================================ */
+
 async function findInteractives(category){
 
-    const items = await getContents(category);
+    const items =
+        await getContents(category);
 
     const folders =
-        items.filter(item => item.type === "dir");
+        items.filter(
+            item => item.type === "dir"
+        );
+
 
     /*
-       Check every interactive folder simultaneously.
+       Inspect every interactive folder
+       simultaneously.
     */
 
-    const checks = folders.map(async folder => {
+    const checks =
+        folders.map(async folder => {
 
-        try{
+            try{
 
-            const contents =
-                await getContents(folder.path);
+                const contents =
+                    await getContents(folder.path);
 
-            const index =
-                contents.find(
-                    item =>
-                        item.type === "file" &&
-                        item.name.toLowerCase() === "index.html"
+
+                const index =
+                    contents.find(
+                        item =>
+                            item.type === "file" &&
+                            item.name.toLowerCase() === "index.html"
+                    );
+
+
+                const metadata =
+                    contents.find(
+                        item =>
+                            item.type === "file" &&
+                            item.name.toLowerCase() === "archive.json"
+                    );
+
+
+                /*
+                   An interactive must contain
+                   both index.html and archive.json.
+                */
+
+                if(!index || !metadata){
+                    return null;
+                }
+
+
+                /*
+                   Load the metadata.
+                */
+
+                const response =
+                    await fetch(metadata.download_url);
+
+
+                if(!response.ok){
+                    return null;
+                }
+
+
+                const data =
+                    await response.json();
+
+
+                return {
+
+                    name:
+                        data.title ||
+                        titleCase(folder.name),
+
+                    description:
+                        data.description ||
+                        "Interactive experience",
+
+                    type:
+                        data.type ||
+                        "interactive",
+
+                    path:
+                        folder.path
+
+                };
+
+
+            }catch(error){
+
+                console.warn(
+                    `Could not inspect ${folder.path}`,
+                    error
                 );
 
-            if(!index){
                 return null;
+
             }
 
-            return {
-                name:titleCase(folder.name),
-                path:folder.path
-            };
+        });
 
-        }catch(error){
-
-            console.warn(
-                `Could not inspect ${folder.path}`,
-                error
-            );
-
-            return null;
-        }
-
-    });
 
     const results =
         await Promise.all(checks);
 
+
     return results.filter(Boolean);
 
 }
+
+
+/* ================================
+   LOAD ARCHIVE
+================================ */
 
 async function loadArchive(){
 
@@ -282,6 +374,12 @@ async function loadArchive(){
         const root =
             await getContents();
 
+
+        /*
+           Every top-level directory
+           becomes a category.
+        */
+
         const categories =
             root.filter(
                 item =>
@@ -289,68 +387,109 @@ async function loadArchive(){
                     !item.name.startsWith(".")
             );
 
+
         /*
-           Check every category simultaneously.
+           Inspect every category
+           simultaneously.
         */
 
         const categoryResults =
             await Promise.all(
 
-                categories.map(async category => {
+                categories.map(
+                    async category => {
 
-                    const interactives =
-                        await findInteractives(category.path);
+                        const interactives =
+                            await findInteractives(
+                                category.path
+                            );
 
-                    return {
-                        category,
-                        interactives
-                    };
 
-                })
+                        return {
+                            category,
+                            interactives
+                        };
+
+                    }
+                )
 
             );
 
+
         archive.innerHTML = "";
+
 
         let visibleCategories = 0;
 
-        for(const result of categoryResults){
+
+        /*
+           Render categories.
+        */
+
+        for(
+            const result of categoryResults
+        ){
 
             const {
                 category,
                 interactives
             } = result;
 
+
+            /*
+               Hide empty categories.
+            */
+
             if(interactives.length === 0){
                 continue;
             }
 
+
             visibleCategories++;
+
 
             const section =
                 document.createElement("section");
 
-            section.className = "section";
+            section.className =
+                "section";
+
 
             const label =
                 document.createElement("div");
 
-            label.className = "section-label";
+            label.className =
+                "section-label";
 
             label.textContent =
                 titleCase(category.name);
 
+
             const collection =
                 document.createElement("div");
 
-            collection.className = "collection";
+            collection.className =
+                "collection";
 
-            for(const interactive of interactives){
+
+            /*
+               Render every interactive.
+            */
+
+            for(
+                const interactive of interactives
+            ){
 
                 const link =
                     document.createElement("a");
 
-                link.className = "entry";
+                link.className =
+                    "entry";
+
+
+                /*
+                   Build the relative URL.
+                */
 
                 link.href =
                     "./" +
@@ -360,29 +499,38 @@ async function loadArchive(){
                         .join("/") +
                     "/";
 
+
                 link.innerHTML = `
 
                     <div>
 
                         <div class="entry-title">
-                            ${escapeHTML(interactive.name)}
+                            ${escapeHTML(
+                                interactive.name
+                            )}
                         </div>
 
                         <div class="entry-description">
-                            Interactive experience
+                            ${escapeHTML(
+                                interactive.description
+                            )}
                         </div>
 
                     </div>
 
                     <div class="entry-type">
-                        INTERACTIVE
+                        ${escapeHTML(
+                            interactive.type
+                        ).toUpperCase()}
                     </div>
 
                 `;
 
+
                 collection.appendChild(link);
 
             }
+
 
             section.appendChild(label);
             section.appendChild(collection);
@@ -390,6 +538,11 @@ async function loadArchive(){
             archive.appendChild(section);
 
         }
+
+
+        /*
+           Nothing found.
+        */
 
         if(visibleCategories === 0){
 
@@ -401,9 +554,11 @@ async function loadArchive(){
 
         }
 
+
     }catch(error){
 
         console.error(error);
+
 
         archive.innerHTML = `
             <div class="status error">
@@ -416,6 +571,11 @@ async function loadArchive(){
     }
 
 }
+
+
+/* ================================
+   START
+================================ */
 
 loadArchive();
 
