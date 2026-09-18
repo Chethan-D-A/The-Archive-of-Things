@@ -151,134 +151,157 @@
 
 
     /*
-     * Rendering Artifact Disclosure
-     */
+ * Rendering Artifact Disclosure
+ *
+ * RAD exists only on the Home page.
+ */
 
-    const trigger =
-        document.createElement("button");
-
-    trigger.className =
-        "rad-trigger";
-
-    trigger.type =
-        "button";
-
-    trigger.textContent =
-        "RAD";
-
-    trigger.setAttribute(
-        "aria-label",
-        "Rendering Artifact Disclosure"
-    );
+const homePage =
+    document.querySelector(".home-shell");
 
 
-    const panel =
-        document.createElement("aside");
+if (homePage) {
 
-    panel.className =
-        "rad-panel";
-
-    panel.innerHTML = `
-        <h2 class="rad-panel-title">
-            Rendering Artifact Disclosure
-        </h2>
-
-        <p class="rad-panel-text">
-            If you are viewing the Archive in Firefox
-            and notice a faint dotted trail following
-            the cursor, it is a browser-specific
-            rendering artifact affecting the custom
-            cursor. The trail is not intentionally
-            rendered by the Archive.
-            <br><br>
-            Chromium-based browsers, including Brave
-            and Edge, do not exhibit this effect in
-            our testing. The Archive and its
-            interactives remain fully functional.
-        </p>
-    `;
+    const publicationsButton =
+        homePage.querySelector(
+            ".publications-button"
+        );
 
 
-    document.body.appendChild(trigger);
-    document.body.appendChild(panel);
+    if (publicationsButton) {
+
+        const trigger =
+            document.createElement("button");
+
+        trigger.className =
+            "rad-trigger";
+
+        trigger.type =
+            "button";
+
+        trigger.textContent =
+            "RAD";
+
+        trigger.setAttribute(
+            "aria-label",
+            "Rendering Artifact Disclosure"
+        );
 
 
-    trigger.addEventListener(
-        "click",
-        () => {
+        const panel =
+            document.createElement("aside");
 
-            const open =
-                panel.classList.toggle(
-                    "is-open"
+        panel.className =
+            "rad-panel";
+
+        panel.innerHTML = `
+            <h2 class="rad-panel-title">
+                Rendering Artifact Disclosure
+            </h2>
+
+            <p class="rad-panel-text">
+                If you are viewing the Archive in Firefox
+                and notice a faint dotted trail following
+                the cursor, it is a browser-specific
+                rendering artifact affecting the custom
+                cursor. The trail is not intentionally
+                rendered by the Archive.
+                <br><br>
+                Chromium-based browsers, including Brave
+                and Edge, do not exhibit this effect in
+                our testing. The Archive and its
+                interactives remain fully functional.
+            </p>
+        `;
+
+
+        publicationsButton.insertAdjacentElement(
+            "afterend",
+            trigger
+        );
+
+
+        homePage.appendChild(panel);
+
+
+        trigger.addEventListener(
+            "click",
+            () => {
+
+                const open =
+                    panel.classList.toggle(
+                        "is-open"
+                    );
+
+                trigger.setAttribute(
+                    "aria-expanded",
+                    String(open)
                 );
 
-            trigger.setAttribute(
-                "aria-expanded",
-                String(open)
+            }
+        );
+
+
+        document.addEventListener(
+            "click",
+            event => {
+
+                if (
+                    event.target !== trigger &&
+                    !panel.contains(event.target)
+                ) {
+
+                    panel.classList.remove(
+                        "is-open"
+                    );
+
+                }
+
+            }
+        );
+
+
+        if (finePointer) {
+
+            trigger.addEventListener(
+                "mouseenter",
+                () => {
+
+                    const cursor =
+                        document.querySelector(
+                            ".tat-cursor"
+                        );
+
+                    if (cursor) {
+                        cursor.classList.add(
+                            "is-hovering"
+                        );
+                    }
+
+                }
+            );
+
+
+            trigger.addEventListener(
+                "mouseleave",
+                () => {
+
+                    const cursor =
+                        document.querySelector(
+                            ".tat-cursor"
+                        );
+
+                    if (cursor) {
+                        cursor.classList.remove(
+                            "is-hovering"
+                        );
+                    }
+
+                }
             );
 
         }
-    );
-
-
-    document.addEventListener(
-        "click",
-        event => {
-
-            if (
-                event.target !== trigger &&
-                !panel.contains(event.target)
-            ) {
-
-                panel.classList.remove(
-                    "is-open"
-                );
-
-            }
-
-        }
-    );
-
-
-    if (finePointer) {
-
-        trigger.addEventListener(
-            "mouseenter",
-            () => {
-
-                const cursor =
-                    document.querySelector(
-                        ".tat-cursor"
-                    );
-
-                if (cursor) {
-                    cursor.classList.add(
-                        "is-hovering"
-                    );
-                }
-
-            }
-        );
-
-
-        trigger.addEventListener(
-            "mouseleave",
-            () => {
-
-                const cursor =
-                    document.querySelector(
-                        ".tat-cursor"
-                    );
-
-                if (cursor) {
-                    cursor.classList.remove(
-                        "is-hovering"
-                    );
-                }
-
-            }
-        );
 
     }
 
-})();
+}
