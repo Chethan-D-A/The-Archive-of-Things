@@ -1,0 +1,1186 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1.0">
+<title>THE VOID MACHINE</title>
+
+<style>
+*{
+    box-sizing:border-box;
+    margin:0;
+    padding:0;
+}
+
+html,body{
+    width:100%;
+    height:100%;
+    overflow:hidden;
+    background:#000;
+    cursor:none;
+}
+
+body{
+    font-family:Arial,Helvetica,sans-serif;
+    color:#fff;
+}
+
+canvas{
+    position:fixed;
+    inset:0;
+    width:100%;
+    height:100%;
+}
+
+#c{z-index:1}
+#fx{z-index:2;pointer-events:none}
+
+#intro{
+    position:fixed;
+    inset:0;
+    z-index:20;
+    background:#000;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    transition:opacity 1.5s;
+}
+
+#intro.dead{
+    opacity:0;
+    pointer-events:none;
+}
+
+.introInner{
+    width:min(700px,80vw);
+}
+
+.introTop{
+    font:10px monospace;
+    letter-spacing:6px;
+    opacity:.45;
+    margin-bottom:20px;
+}
+
+.loading{
+    height:1px;
+    background:#181818;
+    position:relative;
+    overflow:hidden;
+}
+
+.loading i{
+    position:absolute;
+    left:-40%;
+    width:40%;
+    height:100%;
+    background:white;
+    animation:load 2s cubic-bezier(.7,0,.2,1) forwards;
+}
+
+@keyframes load{
+    to{left:100%}
+}
+
+#interface{
+    position:fixed;
+    inset:0;
+    z-index:10;
+    pointer-events:none;
+}
+
+.title{
+    position:absolute;
+    left:50%;
+    top:50%;
+    transform:translate(-50%,-50%);
+    text-align:center;
+    mix-blend-mode:screen;
+}
+
+.title .small{
+    font:9px monospace;
+    letter-spacing:8px;
+    opacity:.35;
+    margin-bottom:30px;
+}
+
+.title h1{
+    font-size:clamp(55px,11vw,180px);
+    font-weight:900;
+    letter-spacing:-.09em;
+    line-height:.72;
+    transform-origin:center;
+    text-shadow:
+        0 0 2px #fff,
+        0 0 40px rgba(255,255,255,.15);
+}
+
+.title h1 span{
+    display:block;
+}
+
+#t2{
+    opacity:.07;
+    transform:translate(13px,8px);
+    position:absolute;
+    inset:0;
+    filter:blur(1px);
+}
+
+#t3{
+    opacity:.05;
+    transform:translate(-15px,-4px);
+    position:absolute;
+    inset:0;
+}
+
+.instruction{
+    position:absolute;
+    bottom:38px;
+    left:50%;
+    transform:translateX(-50%);
+    font:9px monospace;
+    letter-spacing:5px;
+    opacity:.35;
+    white-space:nowrap;
+}
+
+.readout{
+    position:absolute;
+    top:30px;
+    left:35px;
+    font:9px monospace;
+    line-height:1.8;
+    letter-spacing:2px;
+    opacity:.32;
+}
+
+.readout.right{
+    left:auto;
+    right:35px;
+    text-align:right;
+}
+
+.corner{
+    position:absolute;
+    width:45px;
+    height:45px;
+    opacity:.25;
+}
+
+.a{left:25px;top:25px;border-left:1px solid #fff;border-top:1px solid #fff}
+.b{right:25px;top:25px;border-right:1px solid #fff;border-top:1px solid #fff}
+.c{left:25px;bottom:25px;border-left:1px solid #fff;border-bottom:1px solid #fff}
+.d{right:25px;bottom:25px;border-right:1px solid #fff;border-bottom:1px solid #fff}
+
+#cursor{
+    position:fixed;
+    z-index:50;
+    width:26px;
+    height:26px;
+    border:1px solid rgba(255,255,255,.8);
+    border-radius:50%;
+    transform:translate(-50%,-50%);
+    pointer-events:none;
+    mix-blend-mode:difference;
+}
+
+#cursor:after{
+    content:"";
+    position:absolute;
+    width:3px;
+    height:3px;
+    background:#fff;
+    left:50%;
+    top:50%;
+    transform:translate(-50%,-50%);
+    border-radius:50%;
+}
+
+#flash{
+    position:fixed;
+    inset:0;
+    background:#fff;
+    opacity:0;
+    z-index:100;
+    pointer-events:none;
+}
+
+.flash{
+    animation:flash .5s ease-out;
+}
+
+@keyframes flash{
+    0%{opacity:0}
+    8%{opacity:.9}
+    100%{opacity:0}
+}
+
+/* little HTML artifacts */
+#message{
+    position:absolute;
+    left:50%;
+    top:50%;
+    transform:translate(-50%,-50%);
+    font:10px monospace;
+    letter-spacing:5px;
+    opacity:0;
+    white-space:nowrap;
+}
+
+#message.show{
+    animation:message 2.5s forwards;
+}
+
+@keyframes message{
+    0%{opacity:0;transform:translate(-50%,-50%) scale(.8)}
+    15%{opacity:.8}
+    75%{opacity:.8}
+    100%{opacity:0;transform:translate(-50%,-50%) scale(1.5)}
+}
+
+@media(max-width:600px){
+    .readout{left:15px;top:15px}
+    .readout.right{right:15px}
+    .corner{display:none}
+    .instruction{letter-spacing:2px}
+}
+</style>
+</head>
+
+<body>
+
+<div id="intro">
+    <div class="introInner">
+        <div class="introTop">BOOTING UNKNOWN SYSTEM</div>
+        <div class="loading"><i></i></div>
+    </div>
+</div>
+
+<canvas id="c"></canvas>
+<canvas id="fx"></canvas>
+
+<div id="interface">
+
+    <div class="readout">
+        FIELD // 07<br>
+        DEPTH // <span id="depth">000</span><br>
+        ENTITIES // <span id="entities">0000</span>
+    </div>
+
+    <div class="readout right">
+        X <span id="mx">000</span><br>
+        Y <span id="my">000</span><br>
+        VELOCITY // <span id="vel">00</span>
+    </div>
+
+    <div class="corner a"></div>
+    <div class="corner b"></div>
+    <div class="corner c"></div>
+    <div class="corner d"></div>
+
+    <div class="title" id="title">
+
+        <div class="small">YOU ARE LOOKING AT A MACHINE</div>
+
+        <h1>
+            <span id="t1">VOID</span>
+            <span id="t2">VOID</span>
+            <span id="t3">VOID</span>
+        </h1>
+
+    </div>
+
+    <div id="message"></div>
+
+    <div class="instruction">
+        MOVE // DISTORT &nbsp;&nbsp;&nbsp; CLICK // BREAK
+    </div>
+</div>
+
+<div id="cursor"></div>
+<div id="flash"></div>
+
+<script>
+
+/* ============================================================
+   THE VOID MACHINE
+   Pure JavaScript.
+   No external resources.
+   ============================================================ */
+
+const canvas = document.getElementById("c");
+const fx = document.getElementById("fx");
+
+const ctx = canvas.getContext("2d");
+const fctx = fx.getContext("2d");
+
+let W,H,DPR;
+
+function resize(){
+
+    DPR=Math.min(devicePixelRatio||1,2);
+
+    W=innerWidth;
+    H=innerHeight;
+
+    canvas.width=W*DPR;
+    canvas.height=H*DPR;
+
+    fx.width=W*DPR;
+    fx.height=H*DPR;
+
+    ctx.setTransform(DPR,0,0,DPR,0,0);
+    fctx.setTransform(DPR,0,0,DPR,0,0);
+}
+
+resize();
+addEventListener("resize",resize);
+
+
+/* ============================================================
+   MOUSE
+   ============================================================ */
+
+const mouse={
+    x:W/2,
+    y:H/2,
+    tx:W/2,
+    ty:H/2,
+    vx:0,
+    vy:0
+};
+
+addEventListener("pointermove",e=>{
+
+    mouse.tx=e.clientX;
+    mouse.ty=e.clientY;
+
+    document.getElementById("mx").textContent=
+        String(Math.floor(e.clientX)).padStart(3,"0");
+
+    document.getElementById("my").textContent=
+        String(Math.floor(e.clientY)).padStart(3,"0");
+});
+
+
+/* ============================================================
+   3D MATH
+   ============================================================ */
+
+function rotX(p,a){
+    const c=Math.cos(a),s=Math.sin(a);
+    return {
+        x:p.x,
+        y:p.y*c-p.z*s,
+        z:p.y*s+p.z*c
+    };
+}
+
+function rotY(p,a){
+    const c=Math.cos(a),s=Math.sin(a);
+    return {
+        x:p.x*c+p.z*s,
+        y:p.y,
+        z:-p.x*s+p.z*c
+    };
+}
+
+function rotZ(p,a){
+    const c=Math.cos(a),s=Math.sin(a);
+    return {
+        x:p.x*c-p.y*s,
+        y:p.x*s+p.y*c,
+        z:p.z
+    };
+}
+
+function project(p){
+
+    const f=700;
+
+    const z=p.z+900;
+
+    return {
+        x:W/2+p.x*f/z,
+        y:H/2+p.y*f/z,
+        scale:f/z
+    };
+}
+
+
+/* ============================================================
+   IMPOSSIBLE OBJECT
+   ============================================================ */
+
+const vertices=[];
+const edges=[];
+
+
+/*
+    We don't use a conventional cube.
+
+    The object consists of nested rotating polyhedra
+    whose points periodically slide between two
+    different geometries.
+*/
+
+const rings=7;
+const sides=12;
+
+for(let r=0;r<rings;r++){
+
+    const rad=100+r*48;
+    const z=(r-3)*85;
+
+    for(let i=0;i<sides;i++){
+
+        const a=i/sides*Math.PI*2;
+
+        vertices.push({
+            x:Math.cos(a)*rad,
+            y:Math.sin(a)*rad,
+            z:z,
+            ring:r,
+            index:i
+        });
+    }
+}
+
+for(let r=0;r<rings;r++){
+
+    for(let i=0;i<sides;i++){
+
+        const a=r*sides+i;
+        const b=r*sides+(i+1)%sides;
+
+        edges.push([a,b]);
+
+        if(r<rings-1){
+
+            const c=(r+1)*sides+i;
+
+            edges.push([a,c]);
+
+            if(i%2===0){
+                edges.push([a,(r+1)*sides+(i+3)%sides]);
+            }
+        }
+    }
+}
+
+
+/* ============================================================
+   PARTICLE UNIVERSE
+   ============================================================ */
+
+const particles=[];
+
+for(let i=0;i<2400;i++){
+
+    particles.push({
+        x:(Math.random()-.5)*2400,
+        y:(Math.random()-.5)*1600,
+        z:Math.random()*1800-300,
+
+        vx:0,
+        vy:0,
+        vz:Math.random()*2+.3,
+
+        life:Math.random(),
+        seed:Math.random()*1000
+    });
+}
+
+
+/* ============================================================
+   TRAIL PARTICLES
+   ============================================================ */
+
+const trails=[];
+
+function burst(x,y,count=180){
+
+    for(let i=0;i<count;i++){
+
+        const a=Math.random()*Math.PI*2;
+        const speed=2+Math.random()*12;
+
+        trails.push({
+            x,
+            y,
+            vx:Math.cos(a)*speed,
+            vy:Math.sin(a)*speed,
+            life:1,
+            size:.5+Math.random()*3
+        });
+    }
+}
+
+
+/* ============================================================
+   DRAW PARTICLE UNIVERSE
+   ============================================================ */
+
+function drawUniverse(t){
+
+    /*
+       Slowly clear instead of completely clearing.
+       This produces physical-looking motion trails.
+    */
+
+    ctx.fillStyle="rgba(0,0,2,.16)";
+    ctx.fillRect(0,0,W,H);
+
+    for(const p of particles){
+
+        p.z+=p.vz;
+
+        if(p.z>1800){
+            p.z=-500;
+            p.x=(Math.random()-.5)*2400;
+            p.y=(Math.random()-.5)*1600;
+        }
+
+        /*
+           Mouse becomes a gravitational distortion.
+        */
+
+        const dx=p.x-(mouse.x-W/2)*1.4;
+        const dy=p.y-(mouse.y-H/2)*1.4;
+
+        const dist=Math.sqrt(dx*dx+dy*dy);
+
+        if(dist<450){
+
+            const force=(1-dist/450);
+
+            p.vx += (-dx/dist)*force*.04;
+            p.vy += (-dy/dist)*force*.04;
+        }
+
+        p.x+=p.vx;
+        p.y+=p.vy;
+
+        p.vx*=.995;
+        p.vy*=.995;
+
+        const pp=project(p);
+
+        if(pp.x<-50||pp.x>W+50||pp.y<-50||pp.y>H+50)
+            continue;
+
+        const alpha=Math.min(1,pp.scale*2);
+
+        ctx.beginPath();
+
+        ctx.arc(
+            pp.x,
+            pp.y,
+            Math.max(.3,pp.scale*2),
+            0,
+            Math.PI*2
+        );
+
+        ctx.fillStyle=`rgba(210,230,255,${alpha*.55})`;
+        ctx.fill();
+    }
+}
+
+
+/* ============================================================
+   OBJECT DRAW
+   ============================================================ */
+
+function drawMachine(t){
+
+    const time=t*.00045;
+
+    /*
+       Mouse controls the machine itself.
+    */
+
+    const mx=(mouse.x/W-.5);
+    const my=(mouse.y/H-.5);
+
+    const baseX=Math.sin(time*.7)*30;
+    const baseY=Math.cos(time*.5)*25;
+
+    const projected=[];
+
+    for(let i=0;i<vertices.length;i++){
+
+        const v=vertices[i];
+
+        const wave=
+            Math.sin(time*7+v.index*.7+v.ring)*35;
+
+        const ringWarp=
+            Math.sin(time*3+v.ring)*18;
+
+        let p={
+            x:v.x+(v.x/v.ring?.0001:0)*wave,
+            y:v.y,
+            z:v.z+ringWarp
+        };
+
+        /*
+           Geometry breathes.
+        */
+
+        const breathing=
+            1+
+            Math.sin(time*4+v.ring)*.12+
+            Math.sin(time*9+v.index)*.025;
+
+        p.x*=breathing;
+        p.y*=breathing;
+
+        p=rotX(p,time*1.3+my*1.2);
+        p=rotY(p,time*1.7+mx*1.5);
+        p=rotZ(p,time*.55);
+
+        p.x+=baseX;
+        p.y+=baseY;
+
+        projected.push(project(p));
+    }
+
+    /*
+       Draw edges ordered approximately by depth.
+    */
+
+    const sorted=edges.slice().sort((a,b)=>{
+
+        const za=vertices[a[0]].z+vertices[a[1]].z;
+        const zb=vertices[b[0]].z+vertices[b[1]].z;
+
+        return za-zb;
+    });
+
+    for(const e of sorted){
+
+        const a=projected[e[0]];
+        const b=projected[e[1]];
+
+        const v1=vertices[e[0]];
+        const v2=vertices[e[1]];
+
+        const depth=(v1.z+v2.z)/2;
+
+        const pulse=
+            .5+
+            Math.sin(time*12+v1.index*.5)*.25;
+
+        ctx.beginPath();
+        ctx.moveTo(a.x,a.y);
+        ctx.lineTo(b.x,b.y);
+
+        ctx.lineWidth=
+            Math.max(.25,(a.scale+b.scale)*.7);
+
+        /*
+           Rather than a static color, the line changes
+           character based on position.
+        */
+
+        const hue=
+            (v1.index/sides*360+
+             time*120+
+             v1.ring*45)%360;
+
+        ctx.strokeStyle=
+            `hsla(${hue},80%,75%,${.13+pulse*.24})`;
+
+        ctx.stroke();
+    }
+
+
+    /*
+       Draw vertices as tiny stars.
+    */
+
+    for(let i=0;i<projected.length;i++){
+
+        const p=projected[i];
+
+        const pulse=
+            1+
+            Math.sin(time*10+i)*.5;
+
+        ctx.beginPath();
+        ctx.arc(
+            p.x,
+            p.y,
+            Math.max(.6,p.scale*4*pulse),
+            0,
+            Math.PI*2
+        );
+
+        ctx.fillStyle="rgba(255,255,255,.65)";
+        ctx.fill();
+    }
+
+
+    /*
+       Nested impossible center.
+    */
+
+    drawCore(t,mx,my);
+}
+
+
+/* ============================================================
+   THE CORE
+   ============================================================ */
+
+function drawCore(t,mx,my){
+
+    const cx=W/2+mx*40;
+    const cy=H/2+my*40;
+
+    const pulse=
+        1+
+        Math.sin(t*.004)*.15;
+
+    /*
+       Hundreds of tiny radial fragments.
+    */
+
+    for(let i=0;i<170;i++){
+
+        const a=
+            i/170*Math.PI*2+
+            t*.0008*(i%2?1:-1);
+
+        const wobble=
+            Math.sin(t*.002+i*.9)*15;
+
+        const r=
+            (35+
+            Math.sin(t*.0015+i)*20+
+            wobble)*pulse;
+
+        const x=cx+Math.cos(a)*r;
+        const y=cy+Math.sin(a)*r;
+
+        ctx.beginPath();
+        ctx.moveTo(cx,cy);
+        ctx.lineTo(x,y);
+
+        ctx.lineWidth=.4;
+
+        ctx.strokeStyle=
+            `rgba(255,255,255,${.05+Math.random()*.1})`;
+
+        ctx.stroke();
+    }
+
+    /*
+       Black hole / white core.
+    */
+
+    const g=ctx.createRadialGradient(
+        cx,cy,0,
+        cx,cy,110*pulse
+    );
+
+    g.addColorStop(0,"rgba(255,255,255,.95)");
+    g.addColorStop(.025,"rgba(255,255,255,.8)");
+    g.addColorStop(.08,"rgba(255,255,255,.08)");
+    g.addColorStop(.35,"rgba(255,255,255,.025)");
+    g.addColorStop(1,"rgba(0,0,0,0)");
+
+    ctx.fillStyle=g;
+    ctx.beginPath();
+    ctx.arc(cx,cy,110*pulse,0,Math.PI*2);
+    ctx.fill();
+}
+
+
+/* ============================================================
+   ENERGY RINGS
+   ============================================================ */
+
+function drawRings(t){
+
+    const cx=W/2;
+    const cy=H/2;
+
+    for(let i=0;i<13;i++){
+
+        const phase=t*.0005+i*.72;
+
+        const r=
+            100+
+            i*42+
+            Math.sin(phase*4)*18;
+
+        ctx.save();
+
+        ctx.translate(cx,cy);
+
+        ctx.rotate(
+            phase*(i%2?1:-1)
+        );
+
+        ctx.scale(
+            1,
+            .25+
+            Math.sin(t*.0008+i)*.12
+        );
+
+        ctx.beginPath();
+
+        ctx.arc(
+            0,0,r,
+            0,
+            Math.PI*2
+        );
+
+        ctx.lineWidth=
+            i===6?1.5:.35;
+
+        ctx.strokeStyle=
+            i===6
+            ?"rgba(255,255,255,.3)"
+            :"rgba(170,200,255,.07)";
+
+        ctx.stroke();
+
+        ctx.restore();
+    }
+}
+
+
+/* ============================================================
+   TRAILS
+   ============================================================ */
+
+function drawTrails(){
+
+    for(let i=trails.length-1;i>=0;i--){
+
+        const p=trails[i];
+
+        p.x+=p.vx;
+        p.y+=p.vy;
+
+        p.vx*=.97;
+        p.vy*=.97;
+
+        p.life-=.012;
+
+        if(p.life<=0){
+            trails.splice(i,1);
+            continue;
+        }
+
+        fctx.beginPath();
+
+        fctx.arc(
+            p.x,
+            p.y,
+            p.size*p.life,
+            0,
+            Math.PI*2
+        );
+
+        fctx.fillStyle=
+            `rgba(255,255,255,${p.life*.7})`;
+
+        fctx.fill();
+    }
+}
+
+
+/* ============================================================
+   GLITCH SYSTEM
+   ============================================================ */
+
+function glitch(){
+
+    const title=document.getElementById("title");
+
+    if(Math.random()<.025){
+
+        const x=(Math.random()-.5)*18;
+        const y=(Math.random()-.5)*10;
+
+        title.style.transform=
+            `translate(calc(-50% + ${x}px),
+             calc(-50% + ${y}px))
+             skewX(${(Math.random()-.5)*7}deg)`;
+
+        setTimeout(()=>{
+
+            title.style.transform=
+                "translate(-50%,-50%)";
+
+        },40+Math.random()*100);
+    }
+}
+
+
+/* ============================================================
+   DIMENSION BREAK
+   ============================================================ */
+
+let stage=0;
+
+function breakReality(){
+
+    stage++;
+
+    const flash=document.getElementById("flash");
+
+    flash.classList.remove("flash");
+    void flash.offsetWidth;
+    flash.classList.add("flash");
+
+    burst(mouse.x,mouse.y,stage>2?600:250);
+
+    /*
+       Each interaction changes the system.
+    */
+
+    if(stage===1){
+
+        document.querySelector(".small").textContent=
+            "WARNING // GEOMETRY IS NO LONGER EUCLIDEAN";
+
+        document.querySelector(".instruction").textContent=
+            "KEEP MOVING";
+
+    }
+
+    if(stage===2){
+
+        document.querySelector(".small").textContent=
+            "THE OBJECT HAS SEEN YOU";
+
+        document.querySelector(".instruction").textContent=
+            "DO NOT STOP";
+
+        /*
+           Massive particle shockwave.
+        */
+
+        for(const p of particles){
+
+            p.vx+=(Math.random()-.5)*8;
+            p.vy+=(Math.random()-.5)*8;
+            p.vz+=Math.random()*10;
+        }
+    }
+
+    if(stage===3){
+
+        document.querySelector(".small").textContent=
+            "THERE IS NO SCREEN";
+
+        document.querySelector(".instruction").textContent=
+            "CLICK AGAIN";
+
+        /*
+           The central object briefly disappears,
+           making the particles form the void.
+        */
+
+        canvas.style.filter="invert(1)";
+
+        setTimeout(()=>{
+            canvas.style.filter="";
+        },500);
+    }
+
+    if(stage>=4){
+
+        const msg=document.getElementById("message");
+
+        msg.textContent="YOU HAVE REACHED THE WRONG SIDE";
+
+        msg.classList.remove("show");
+
+        void msg.offsetWidth;
+
+        msg.classList.add("show");
+
+        /*
+           Ultimate explosion.
+        */
+
+        for(let i=0;i<1400;i++){
+
+            const a=Math.random()*Math.PI*2;
+            const speed=1+Math.random()*30;
+
+            trails.push({
+                x:W/2,
+                y:H/2,
+                vx:Math.cos(a)*speed,
+                vy:Math.sin(a)*speed,
+                life:1,
+                size:.5+Math.random()*4
+            });
+        }
+
+        stage=0;
+    }
+}
+
+addEventListener("click",breakReality);
+
+
+/* ============================================================
+   CURSOR PHYSICS
+   ============================================================ */
+
+const cursor=document.getElementById("cursor");
+
+function updateMouse(){
+
+    const oldX=mouse.x;
+    const oldY=mouse.y;
+
+    mouse.x+=(mouse.tx-mouse.x)*.075;
+    mouse.y+=(mouse.ty-mouse.y)*.075;
+
+    mouse.vx=mouse.x-oldX;
+    mouse.vy=mouse.y-oldY;
+
+    cursor.style.left=mouse.x+"px";
+    cursor.style.top=mouse.y+"px";
+
+    const speed=
+        Math.min(99,
+        Math.sqrt(mouse.vx**2+mouse.vy**2)*4);
+
+    document.getElementById("vel").textContent=
+        String(Math.floor(speed)).padStart(2,"0");
+
+    requestAnimationFrame(updateMouse);
+}
+
+updateMouse();
+
+
+/* ============================================================
+   MAIN LOOP
+   ============================================================ */
+
+function loop(t){
+
+    /*
+       Very slow fade.
+    */
+
+    ctx.fillStyle="rgba(0,0,0,.08)";
+    ctx.fillRect(0,0,W,H);
+
+    drawUniverse(t);
+
+    drawRings(t);
+
+    drawMachine(t);
+
+    fctx.clearRect(0,0,W,H);
+
+    drawTrails();
+
+    glitch();
+
+    document.getElementById("depth").textContent=
+        String(
+            Math.floor(
+                500+
+                Math.sin(t*.0007)*300+
+                Math.abs(mouse.vx+mouse.vy)*20
+            )
+        ).padStart(3,"0");
+
+    document.getElementById("entities").textContent=
+        String(particles.length+trails.length)
+        .padStart(4,"0");
+
+    requestAnimationFrame(loop);
+}
+
+requestAnimationFrame(loop);
+
+
+/* ============================================================
+   BOOT
+   ============================================================ */
+
+setTimeout(()=>{
+
+    document.getElementById("intro").classList.add("dead");
+
+},2300);
+
+
+/* ============================================================
+   IDLE BEHAVIOR
+   ============================================================ */
+
+let lastMove=Date.now();
+
+addEventListener("pointermove",()=>{
+    lastMove=Date.now();
+});
+
+setInterval(()=>{
+
+    /*
+       If you stop moving, the machine starts
+       moving itself.
+    */
+
+    if(Date.now()-lastMove>2500){
+
+        mouse.tx=
+            W/2+
+            Math.sin(Date.now()*.0007)*W*.3;
+
+        mouse.ty=
+            H/2+
+            Math.cos(Date.now()*.001)*H*.25;
+    }
+
+},500);
+
+
+/* ============================================================
+   SECRET KEY
+   ============================================================ */
+
+addEventListener("keydown",e=>{
+
+    if(e.code==="Space"){
+        breakReality();
+    }
+
+    if(e.key.toLowerCase()==="r"){
+
+        stage=0;
+
+        document.querySelector(".small").textContent=
+            "YOU ARE LOOKING AT A MACHINE";
+
+        document.querySelector(".instruction").textContent=
+            "MOVE // DISTORT    CLICK // BREAK";
+    }
+
+    if(e.key.toLowerCase()==="f"){
+
+        if(document.documentElement.requestFullscreen)
+            document.documentElement.requestFullscreen();
+    }
+});
+
+</script>
+</body>
+</html>
+
