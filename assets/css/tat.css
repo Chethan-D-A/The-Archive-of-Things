@@ -248,15 +248,15 @@ body {
 .home-header {
     position: relative;
 
-    min-height: 68vh;
+    min-height: 46vh;
 
     display: flex;
     flex-direction: column;
     justify-content: flex-start;
 
-    padding-bottom: 70px;
+    padding-bottom: 55px;
 
-    margin-bottom: 90px;
+    margin-bottom: 65px;
 
     border-bottom: 1px solid var(--bronze);
 }
