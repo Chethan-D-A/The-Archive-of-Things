@@ -1,0 +1,251 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+
+    <meta
+        name="viewport"
+        content="width=device-width, initial-scale=1.0"
+    >
+
+    <meta
+        name="description"
+        content="The Archive of Things — a collection of interactive experiences."
+    >
+
+    <title>The Archive of Things</title>
+
+    <link
+        rel="stylesheet"
+        href="../assets/css/tat.css"
+    >
+</head>
+
+
+<body>
+
+    <main class="home-shell">
+
+        <header class="home-header">
+
+            <div class="home-top">
+
+                <h1 class="home-name">
+                    The Archive<br>
+                    of Things
+                </h1>
+
+                <a
+                    class="publications-button"
+                    href="../publications/"
+                >
+                    Publications
+                </a>
+
+            </div>
+
+
+            <p class="home-statement">
+                A living collection of things worth seeing,
+                understanding, and experiencing.
+            </p>
+
+        </header>
+
+
+        <section
+            id="archive"
+            aria-label="Archive"
+        >
+
+            <!--
+                The archive catalogue is injected here
+                automatically by archive.js.
+            -->
+
+        </section>
+
+    </main>
+
+
+    <script src="../assets/js/archive.js"></script>
+
+
+    <script>
+
+        async function renderArchive() {
+
+            let archive =
+                getIndexedArchive();
+
+
+            if (!archive) {
+
+                try {
+
+                    archive =
+                        await indexArchive();
+
+                } catch (error) {
+
+                    console.error(
+                        "Archive indexing failed:",
+                        error
+                    );
+
+                    return;
+
+                }
+
+            }
+
+
+            const container =
+                document.getElementById("archive");
+
+
+            archive.forEach(
+                (category, categoryIndex) => {
+
+                    const categorySection =
+                        document.createElement("section");
+
+                    categorySection.className =
+                        "category";
+
+
+                    const heading =
+                        document.createElement("div");
+
+                    heading.className =
+                        "category-heading";
+
+
+                    const number =
+                        document.createElement("span");
+
+                    number.className =
+                        "category-number";
+
+                    number.textContent =
+                        String(categoryIndex + 1)
+                            .padStart(2, "0");
+
+
+                    const name =
+                        document.createElement("h2");
+
+                    name.className =
+                        "category-name";
+
+                    name.textContent =
+                        category.name;
+
+
+                    heading.appendChild(number);
+                    heading.appendChild(name);
+
+
+                    const list =
+                        document.createElement("div");
+
+                    list.className =
+                        "interactive-list";
+
+
+                    category.interactives.forEach(
+                        interactive => {
+
+                            const entry =
+                                document.createElement("a");
+
+                            entry.className =
+                                "interactive-entry";
+
+                            entry.href =
+                                `../${interactive.path}/`;
+
+
+                            const main =
+                                document.createElement("div");
+
+                            main.className =
+                                "interactive-main";
+
+
+                            const title =
+                                document.createElement("h3");
+
+                            title.className =
+                                "interactive-title";
+
+                            title.textContent =
+                                interactive.name;
+
+
+                            const description =
+                                document.createElement("p");
+
+                            description.className =
+                                "interactive-description";
+
+                            description.textContent =
+                                interactive.description;
+
+
+                            main.appendChild(title);
+                            main.appendChild(description);
+
+
+                            const type =
+                                document.createElement("span");
+
+                            type.className =
+                                "interactive-type";
+
+                            type.textContent =
+                                interactive.type
+                                    .toUpperCase();
+
+
+                            entry.appendChild(main);
+                            entry.appendChild(type);
+
+                            list.appendChild(entry);
+
+                        }
+                    );
+
+
+                    categorySection.appendChild(heading);
+                    categorySection.appendChild(list);
+
+                    container.appendChild(categorySection);
+
+                }
+            );
+
+
+            /*
+             * The cursor script runs after the page initially loads.
+             * New archive links need the same hover behaviour.
+             */
+
+            if (typeof window.initializeArchiveCursor === "function") {
+                window.initializeArchiveCursor();
+            }
+
+        }
+
+
+        renderArchive();
+
+    </script>
+
+
+    <script src="../assets/js/cursor.js"></script>
+
+</body>
+
+</html>
