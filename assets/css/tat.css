@@ -252,7 +252,7 @@ body {
 
     display: flex;
     flex-direction: column;
-    justify-content: flex-end;
+    justify-content: flex-start;
 
     padding-bottom: 70px;
 
@@ -332,7 +332,7 @@ body {
 .home-statement {
     max-width: 760px;
 
-    margin: 0;
+    margin: 18px 0 0;
 
     color: var(--ivory);
 
