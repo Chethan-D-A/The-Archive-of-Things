@@ -1,0 +1,1309 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>VOID MACHINE</title>
+
+<style>
+*{box-sizing:border-box}
+html,body{
+    margin:0;
+    width:100%;
+    height:100%;
+    overflow:hidden;
+    background:#020204;
+    color:#fff;
+    font-family:Arial,Helvetica,sans-serif;
+    user-select:none;
+    cursor:none;
+}
+canvas{
+    position:fixed;
+    inset:0;
+    width:100%;
+    height:100%;
+}
+#world{z-index:1}
+#effects{z-index:2;pointer-events:none}
+
+#ui{
+    position:fixed;
+    inset:0;
+    z-index:10;
+    pointer-events:none;
+}
+
+#top{
+    position:absolute;
+    top:22px;
+    left:25px;
+    right:25px;
+    display:flex;
+    justify-content:space-between;
+    font:9px monospace;
+    letter-spacing:3px;
+    opacity:.42;
+}
+
+#help{
+    position:absolute;
+    left:25px;
+    bottom:24px;
+    font:9px monospace;
+    line-height:1.9;
+    letter-spacing:2px;
+    opacity:.4;
+}
+
+#stats{
+    position:absolute;
+    right:25px;
+    bottom:24px;
+    text-align:right;
+    font:9px monospace;
+    line-height:1.9;
+    letter-spacing:2px;
+    opacity:.4;
+}
+
+#mode{
+    position:absolute;
+    left:50%;
+    top:25px;
+    transform:translateX(-50%);
+    font:9px monospace;
+    letter-spacing:5px;
+    opacity:.55;
+}
+
+#cursor{
+    position:fixed;
+    z-index:50;
+    width:28px;
+    height:28px;
+    border:1px solid rgba(255,255,255,.75);
+    border-radius:50%;
+    transform:translate(-50%,-50%);
+    pointer-events:none;
+    transition:width .15s,height .15s;
+    mix-blend-mode:difference;
+}
+
+#cursor.hot{
+    width:55px;
+    height:55px;
+}
+
+#message{
+    position:absolute;
+    left:50%;
+    top:50%;
+    transform:translate(-50%,-50%) scale(.8);
+    font:11px monospace;
+    letter-spacing:6px;
+    opacity:0;
+    white-space:nowrap;
+}
+
+#message.show{
+    animation:msg 1.5s ease-out;
+}
+
+@keyframes msg{
+    0%{opacity:0;transform:translate(-50%,-50%) scale(.7)}
+    15%{opacity:1}
+    65%{opacity:1}
+    100%{opacity:0;transform:translate(-50%,-50%) scale(1.35)}
+}
+
+#boot{
+    position:fixed;
+    inset:0;
+    z-index:100;
+    background:#000;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    transition:opacity 1s;
+}
+
+#boot.done{
+    opacity:0;
+    pointer-events:none;
+}
+
+.bootText{
+    width:min(500px,80vw);
+    font:10px monospace;
+    letter-spacing:5px;
+}
+
+.bar{
+    height:1px;
+    background:#222;
+    margin-top:18px;
+    overflow:hidden;
+}
+
+.bar i{
+    display:block;
+    height:100%;
+    width:0;
+    background:#fff;
+    animation:boot 1.8s forwards;
+}
+
+@keyframes boot{
+    100%{width:100%}
+}
+
+#flash{
+    position:fixed;
+    inset:0;
+    z-index:80;
+    background:#fff;
+    opacity:0;
+    pointer-events:none;
+}
+
+.flash{
+    animation:flash .35s;
+}
+
+@keyframes flash{
+    0%{opacity:0}
+    10%{opacity:.8}
+    100%{opacity:0}
+}
+
+@media(max-width:600px){
+    #help{font-size:8px}
+    #top{left:14px;right:14px}
+    #stats{right:14px}
+    #help{left:14px}
+}
+</style>
+</head>
+
+<body>
+
+<canvas id="world"></canvas>
+<canvas id="effects"></canvas>
+
+<div id="ui">
+    <div id="top">
+        <span>VOID MACHINE // OFFLINE</span>
+        <span id="clock">00:00:00</span>
+    </div>
+
+    <div id="mode">MODE // GRAB</div>
+
+    <div id="help">
+        HOLD + DRAG ........ GRAB SPACE<br>
+        RIGHT CLICK ........ GRAVITY WELL<br>
+        SHIFT + DRAG ....... TEAR<br>
+        DOUBLE CLICK ....... IMPACT<br>
+        1 2 3 4 ............ CHANGE DIMENSION<br>
+        SPACE .............. DETONATE<br>
+        R ................... REBUILD
+    </div>
+
+    <div id="stats">
+        NODES <span id="nodes">000</span><br>
+        ENERGY <span id="energy">100</span>%<br>
+        DIMENSION <span id="dimension">03</span>
+    </div>
+
+    <div id="message"></div>
+</div>
+
+<div id="cursor"></div>
+<div id="flash"></div>
+
+<div id="boot">
+    <div class="bootText">
+        INITIALIZING PHYSICS
+        <div class="bar"><i></i></div>
+    </div>
+</div>
+
+<script>
+
+/* =========================================================
+   VOID MACHINE
+   ---------------------------------------------------------
+   No libraries.
+   No external assets.
+   No network.
+   Everything is generated locally.
+   ========================================================= */
+
+const world = document.getElementById("world");
+const effects = document.getElementById("effects");
+
+const ctx = world.getContext("2d");
+const fx = effects.getContext("2d");
+
+let W = innerWidth;
+let H = innerHeight;
+let DPR = 1;
+
+function resize(){
+    W = innerWidth;
+    H = innerHeight;
+    DPR = Math.min(devicePixelRatio || 1,2);
+
+    world.width = W*DPR;
+    world.height = H*DPR;
+
+    effects.width = W*DPR;
+    effects.height = H*DPR;
+
+    ctx.setTransform(DPR,0,0,DPR,0,0);
+    fx.setTransform(DPR,0,0,DPR,0,0);
+}
+
+resize();
+addEventListener("resize",resize);
+
+
+/* =========================================================
+   INPUT
+   ========================================================= */
+
+const mouse = {
+    x:W/2,
+    y:H/2,
+    px:W/2,
+    py:H/2,
+    down:false,
+    right:false,
+    shift:false,
+    dragging:false
+};
+
+addEventListener("pointermove",e=>{
+    mouse.px=mouse.x;
+    mouse.py=mouse.y;
+    mouse.x=e.clientX;
+    mouse.y=e.clientY;
+
+    cursor.style.left=mouse.x+"px";
+    cursor.style.top=mouse.y+"px";
+});
+
+addEventListener("pointerdown",e=>{
+    mouse.down=true;
+    mouse.shift=e.shiftKey;
+
+    if(e.button===2){
+        mouse.right=true;
+        createWell(mouse.x,mouse.y);
+        e.preventDefault();
+    }
+
+    if(e.button===0){
+        mouse.dragging=true;
+    }
+});
+
+addEventListener("pointerup",()=>{
+    mouse.down=false;
+    mouse.right=false;
+    mouse.dragging=false;
+});
+
+addEventListener("contextmenu",e=>e.preventDefault());
+
+let lastClick=0;
+
+addEventListener("dblclick",e=>{
+    impact(e.clientX,e.clientY);
+});
+
+addEventListener("keydown",e=>{
+
+    if(e.code==="Space"){
+        e.preventDefault();
+        detonate();
+    }
+
+    if(e.key.toLowerCase()==="r"){
+        rebuild();
+    }
+
+    if(["1","2","3","4"].includes(e.key)){
+        setDimension(Number(e.key));
+    }
+});
+
+
+/* =========================================================
+   CURSOR
+   ========================================================= */
+
+const cursor=document.getElementById("cursor");
+
+function cursorLoop(){
+
+    const speed=Math.hypot(
+        mouse.x-mouse.px,
+        mouse.y-mouse.py
+    );
+
+    cursor.classList.toggle("hot",mouse.down || speed>15);
+
+    requestAnimationFrame(cursorLoop);
+}
+
+cursorLoop();
+
+
+/* =========================================================
+   DIMENSION SYSTEM
+   ========================================================= */
+
+let dimension=3;
+
+const dimensionNames={
+    1:"LINEAR",
+    2:"PLANAR",
+    3:"VOLUMETRIC",
+    4:"HYPER"
+};
+
+function setDimension(n){
+
+    dimension=n;
+
+    document.getElementById("dimension").textContent=
+        String(n).padStart(2,"0");
+
+    document.getElementById("mode").textContent=
+        "DIMENSION // "+dimensionNames[n];
+
+    say(
+        n===4
+        ?"THE FOURTH DIRECTION IS OPEN"
+        :"DIMENSION "+n+" UNLOCKED"
+    );
+
+    /*
+       Dimensional transition shock.
+    */
+
+    for(const p of particles){
+
+        p.vx+=(Math.random()-.5)*n*2;
+        p.vy+=(Math.random()-.5)*n*2;
+        p.vz+=(Math.random()-.5)*n*2;
+    }
+
+    impact(W/2,H/2,n*70);
+}
+
+
+/* =========================================================
+   PARTICLES
+   ========================================================= */
+
+const particles=[];
+const COUNT=1100;
+
+function makeParticle(){
+
+    const a=Math.random()*Math.PI*2;
+    const r=Math.pow(Math.random(),.55);
+
+    return {
+        x:Math.cos(a)*r*W*.38,
+        y:Math.sin(a)*r*H*.38,
+        z:(Math.random()-.5)*700,
+
+        vx:0,
+        vy:0,
+        vz:(Math.random()-.5)*.5,
+
+        size:.5+Math.random()*2,
+        angle:a,
+        radius:r,
+
+        homeX:0,
+        homeY:0,
+        homeZ:0,
+
+        energy:Math.random(),
+
+        life:1
+    };
+}
+
+for(let i=0;i<COUNT;i++){
+    particles.push(makeParticle());
+}
+
+function rebuild(){
+
+    particles.length=0;
+
+    for(let i=0;i<COUNT;i++){
+        particles.push(makeParticle());
+    }
+
+    wells.length=0;
+    tears.length=0;
+
+    say("SYSTEM REBUILT");
+
+    impact(W/2,H/2,220);
+}
+
+
+/* =========================================================
+   GRAVITY WELLS
+   ========================================================= */
+
+const wells=[];
+
+function createWell(x,y){
+
+    wells.push({
+        x,
+        y,
+        strength:Math.random()>.5?1:-1,
+        life:1,
+        radius:90
+    });
+
+    if(wells.length>7) wells.shift();
+
+    say("GRAVITY WELL");
+
+    impact(x,y,80);
+}
+
+
+/* =========================================================
+   TEAR EVENTS
+   ========================================================= */
+
+const tears=[];
+
+function createTear(x,y){
+
+    tears.push({
+        x,
+        y,
+        angle:Math.random()*Math.PI,
+        life:1,
+        length:100+Math.random()*300
+    });
+
+    if(tears.length>12) tears.shift();
+}
+
+
+/* =========================================================
+   IMPACT PARTICLES
+   ========================================================= */
+
+const sparks=[];
+
+function impact(x,y,power=170){
+
+    for(let i=0;i<power;i++){
+
+        const a=Math.random()*Math.PI*2;
+        const s=2+Math.random()*12;
+
+        sparks.push({
+            x,
+            y,
+            px:x,
+            py:y,
+            vx:Math.cos(a)*s,
+            vy:Math.sin(a)*s,
+            life:1,
+            size:.5+Math.random()*3
+        });
+    }
+
+    flash();
+}
+
+
+/* =========================================================
+   DETONATION
+   ========================================================= */
+
+function detonate(){
+
+    say("MASSIVE ENERGY RELEASE");
+
+    impact(W/2,H/2,1200);
+
+    for(const p of particles){
+
+        const dx=p.x;
+        const dy=p.y;
+
+        const d=Math.max(30,Math.hypot(dx,dy));
+
+        p.vx += dx/d*(15+Math.random()*20);
+        p.vy += dy/d*(15+Math.random()*20);
+
+        p.vz += (Math.random()-.5)*30;
+    }
+
+    energy=100;
+}
+
+
+/* =========================================================
+   PHYSICS
+   ========================================================= */
+
+let energy=100;
+
+function physics(){
+
+    /*
+       The cursor itself behaves like a movable
+       gravitational disturbance.
+    */
+
+    const cursorStrength=
+        mouse.down
+        ? 1.8
+        : .35;
+
+    for(const p of particles){
+
+        /* dimensional warp */
+
+        const dx=p.x-mouse.x+W/2;
+        const dy=p.y-mouse.y+H/2;
+
+        const d=Math.max(20,Math.hypot(dx,dy));
+
+        if(d<260){
+
+            const force=
+                (1-d/260)*
+                cursorStrength*
+                (mouse.down ? -1 : 1);
+
+            p.vx += dx/d*force;
+            p.vy += dy/d*force;
+        }
+
+        /* gravity wells */
+
+        for(const w of wells){
+
+            const wx=w.x-W/2;
+            const wy=w.y-H/2;
+
+            const qx=wx-p.x;
+            const qy=wy-p.y;
+
+            const dist=Math.max(20,Math.hypot(qx,qy));
+
+            if(dist<500){
+
+                const force=
+                    w.strength*
+                    (1-dist/500)*
+                    2.2;
+
+                p.vx += qx/dist*force;
+                p.vy += qy/dist*force;
+            }
+        }
+
+        /* dimensional behavior */
+
+        if(dimension===1){
+
+            p.vy*=.82;
+
+        }else if(dimension===2){
+
+            p.vz*=.5;
+
+        }else if(dimension===4){
+
+            const hyper=
+                Math.sin(
+                    p.x*.01+
+                    p.y*.008+
+                    performance.now()*.001
+                );
+
+            p.vx += hyper*.06;
+            p.vy += Math.cos(hyper)*.06;
+            p.vz += Math.sin(hyper)*.08;
+        }
+
+        /* dragging the entire universe */
+
+        if(mouse.dragging && mouse.shift){
+
+            const dx=mouse.x-mouse.px;
+            const dy=mouse.y-mouse.py;
+
+            p.vx+=dx*.035;
+            p.vy+=dy*.035;
+
+            createTear(mouse.x,mouse.y);
+        }
+
+        p.x+=p.vx;
+        p.y+=p.vy;
+        p.z+=p.vz;
+
+        p.vx*=.985;
+        p.vy*=.985;
+        p.vz*=.985;
+
+        /*
+           Slowly restore particles toward their
+           procedural orbital positions.
+        */
+
+        const a=p.angle+performance.now()*.00015;
+        const targetR=p.radius;
+
+        const tx=
+            Math.cos(a)*
+            targetR*
+            W*.38;
+
+        const ty=
+            Math.sin(a)*
+            targetR*
+            H*.38;
+
+        p.vx+=(tx-p.x)*.00008;
+        p.vy+=(ty-p.y)*.00008;
+
+        if(Math.abs(p.x)>W*2) p.x*=.5;
+        if(Math.abs(p.y)>H*2) p.y*=.5;
+    }
+}
+
+
+/* =========================================================
+   PROJECTED MACHINE
+   ========================================================= */
+
+const rings=9;
+const sides=18;
+
+function project(x,y,z){
+
+    const f=650;
+    const zz=z+1000;
+
+    return {
+        x:W/2+x*f/zz,
+        y:H/2+y*f/zz,
+        s:f/zz
+    };
+}
+
+function rotate3D(x,y,z,rx,ry,rz){
+
+    /* X */
+    let cy=Math.cos(rx);
+    let sy=Math.sin(rx);
+
+    let y1=y*cy-z*sy;
+    let z1=y*sy+z*cy;
+
+    /* Y */
+    let cx=Math.cos(ry);
+    let sx=Math.sin(ry);
+
+    let x2=x*cx+z1*sx;
+    let z2=-x*sx+z1*cx;
+
+    /* Z */
+    let cz=Math.cos(rz);
+    let sz=Math.sin(rz);
+
+    return {
+        x:x2*cz-y1*sz,
+        y:x2*sz+y1*cz,
+        z:z2
+    };
+}
+
+function drawMachine(t){
+
+    const rx=
+        t*.00035+
+        (mouse.y/H-.5)*1.5;
+
+    const ry=
+        t*.00052+
+        (mouse.x/W-.5)*2;
+
+    const rz=t*.00012;
+
+    const points=[];
+
+    for(let r=0;r<rings;r++){
+
+        const ringR=
+            70+
+            r*42+
+            Math.sin(t*.002+r)*15;
+
+        const z=
+            (r-(rings-1)/2)*75;
+
+        for(let i=0;i<sides;i++){
+
+            const a=
+                i/sides*Math.PI*2+
+                t*.00025*(r%2?-1:1);
+
+            /*
+               Actual deformation.
+
+               The mouse doesn't just rotate the thing:
+               it changes the geometry.
+            */
+
+            const distance=
+                Math.hypot(
+                    mouse.x-W/2,
+                    mouse.y-H/2
+                );
+
+            const deformation=
+                Math.sin(
+                    a*3+
+                    t*.003+
+                    distance*.01
+                )*
+                (dimension===4?70:25);
+
+            let p=rotate3D(
+                Math.cos(a)*(ringR+deformation),
+                Math.sin(a)*(ringR+deformation),
+                z+
+                Math.sin(a*2+t*.002)*30,
+                rx,ry,rz
+            );
+
+            points.push(project(p.x,p.y,p.z));
+        }
+    }
+
+    /*
+       Connections.
+    */
+
+    for(let r=0;r<rings;r++){
+
+        for(let i=0;i<sides;i++){
+
+            const a=r*sides+i;
+            const b=r*sides+(i+1)%sides;
+
+            line(points[a],points[b],r,i);
+        }
+
+        if(r<rings-1){
+
+            for(let i=0;i<sides;i+=2){
+
+                const a=r*sides+i;
+                const b=(r+1)*sides+
+                    ((i+(dimension===4?5:2))%sides);
+
+                line(points[a],points[b],r,i);
+            }
+        }
+    }
+
+    /*
+       Center iris.
+    */
+
+    drawIris(t);
+}
+
+function line(a,b,r,i){
+
+    ctx.beginPath();
+    ctx.moveTo(a.x,a.y);
+    ctx.lineTo(b.x,b.y);
+
+    const pulse=
+        .3+
+        Math.sin(
+            performance.now()*.004+
+            r*.8+
+            i
+        )*.2;
+
+    ctx.lineWidth=.35+(r===4?1:0);
+
+    ctx.strokeStyle=
+        `rgba(255,255,255,${Math.max(.04,pulse)})`;
+
+    ctx.stroke();
+}
+
+
+/* =========================================================
+   IRIS
+   ========================================================= */
+
+function drawIris(t){
+
+    const cx=W/2;
+    const cy=H/2;
+
+    for(let i=0;i<70;i++){
+
+        const a=
+            i*.618+
+            t*.0005*
+            (i%2?1:-1);
+
+        const r=
+            15+
+            i*1.7+
+            Math.sin(t*.003+i)*8;
+
+        const x=cx+Math.cos(a)*r;
+        const y=cy+Math.sin(a)*r;
+
+        ctx.beginPath();
+        ctx.moveTo(cx,cy);
+        ctx.lineTo(x,y);
+
+        ctx.strokeStyle=
+            `rgba(255,255,255,${.03+i/2500})`;
+
+        ctx.lineWidth=.5;
+
+        ctx.stroke();
+    }
+
+    const g=ctx.createRadialGradient(
+        cx,cy,0,
+        cx,cy,130
+    );
+
+    g.addColorStop(0,"rgba(255,255,255,.95)");
+    g.addColorStop(.015,"rgba(255,255,255,.8)");
+    g.addColorStop(.04,"rgba(255,255,255,.15)");
+    g.addColorStop(.15,"rgba(255,255,255,.03)");
+    g.addColorStop(1,"rgba(255,255,255,0)");
+
+    ctx.fillStyle=g;
+    ctx.beginPath();
+    ctx.arc(cx,cy,130,0,Math.PI*2);
+    ctx.fill();
+}
+
+
+/* =========================================================
+   PARTICLE RENDERING
+   ========================================================= */
+
+function drawParticles(){
+
+    for(const p of particles){
+
+        /*
+           Fake depth.
+        */
+
+        const scale=
+            600/
+            Math.max(300,p.z+900);
+
+        const x=
+            W/2+
+            p.x*scale;
+
+        const y=
+            H/2+
+            p.y*scale;
+
+        if(x<-20||x>W+20||y<-20||y>H+20)
+            continue;
+
+        const size=
+            Math.max(.25,p.size*scale*2);
+
+        ctx.beginPath();
+        ctx.arc(x,y,size,0,Math.PI*2);
+
+        const alpha=
+            Math.min(.8,.12+scale*.4);
+
+        ctx.fillStyle=
+            `rgba(220,235,255,${alpha})`;
+
+        ctx.fill();
+    }
+}
+
+
+/* =========================================================
+   ENERGY RINGS
+   ========================================================= */
+
+function drawRings(t){
+
+    const cx=W/2;
+    const cy=H/2;
+
+    for(let i=0;i<16;i++){
+
+        const r=
+            90+
+            i*32+
+            Math.sin(t*.001+i)*15;
+
+        ctx.save();
+
+        ctx.translate(cx,cy);
+
+        ctx.rotate(
+            t*.0004*(i%2?1:-1)+
+            i
+        );
+
+        ctx.scale(
+            1,
+            .2+
+            Math.sin(t*.001+i)*.08
+        );
+
+        ctx.beginPath();
+
+        ctx.arc(0,0,r,0,Math.PI*2);
+
+        ctx.strokeStyle=
+            `rgba(255,255,255,${i===7?.22:.045})`;
+
+        ctx.lineWidth=i===7?1:.3;
+
+        ctx.stroke();
+
+        ctx.restore();
+    }
+}
+
+
+/* =========================================================
+   SPARKS
+   ========================================================= */
+
+function drawSparks(){
+
+    for(let i=sparks.length-1;i>=0;i--){
+
+        const s=sparks[i];
+
+        s.px=s.x;
+        s.py=s.y;
+
+        s.x+=s.vx;
+        s.y+=s.vy;
+
+        s.vx*=.97;
+        s.vy*=.97;
+
+        s.life-=.018;
+
+        if(s.life<=0){
+            sparks.splice(i,1);
+            continue;
+        }
+
+        fx.beginPath();
+        fx.moveTo(s.px,s.py);
+        fx.lineTo(s.x,s.y);
+
+        fx.lineWidth=s.size*s.life;
+
+        fx.strokeStyle=
+            `rgba(255,255,255,${s.life})`;
+
+        fx.stroke();
+    }
+}
+
+
+/* =========================================================
+   TEARS
+   ========================================================= */
+
+function drawTears(){
+
+    for(let i=tears.length-1;i>=0;i--){
+
+        const t=tears[i];
+
+        t.life-=.012;
+
+        if(t.life<=0){
+            tears.splice(i,1);
+            continue;
+        }
+
+        const dx=Math.cos(t.angle)*t.length;
+        const dy=Math.sin(t.angle)*t.length;
+
+        fx.beginPath();
+
+        fx.moveTo(
+            t.x-dx*t.life,
+            t.y-dy*t.life
+        );
+
+        fx.lineTo(
+            t.x+dx*t.life,
+            t.y+dy*t.life
+        );
+
+        fx.lineWidth=
+            1+
+            t.life*2;
+
+        fx.strokeStyle=
+            `rgba(255,255,255,${t.life*.7})`;
+
+        fx.stroke();
+    }
+}
+
+
+/* =========================================================
+   WELLS
+   ========================================================= */
+
+function drawWells(t){
+
+    for(let i=wells.length-1;i>=0;i--){
+
+        const w=wells[i];
+
+        w.life-=.0008;
+
+        if(w.life<=0){
+            wells.splice(i,1);
+            continue;
+        }
+
+        fx.save();
+
+        fx.translate(w.x,w.y);
+
+        for(let j=0;j<5;j++){
+
+            const r=
+                w.radius+
+                j*20+
+                Math.sin(t*.004+j)*8;
+
+            fx.beginPath();
+
+            fx.arc(
+                0,
+                0,
+                r,
+                0,
+                Math.PI*2
+            );
+
+            fx.strokeStyle=
+                `rgba(255,255,255,${.05*w.life})`;
+
+            fx.lineWidth=.6;
+
+            fx.stroke();
+        }
+
+        fx.restore();
+    }
+}
+
+
+/* =========================================================
+   FEEDBACK
+   ========================================================= */
+
+function say(text){
+
+    const m=document.getElementById("message");
+
+    m.textContent=text;
+    m.classList.remove("show");
+
+    void m.offsetWidth;
+
+    m.classList.add("show");
+}
+
+function flash(){
+
+    const f=document.getElementById("flash");
+
+    f.classList.remove("flash");
+
+    void f.offsetWidth;
+
+    f.classList.add("flash");
+}
+
+
+/* =========================================================
+   CAMERA DISTORTION
+   ========================================================= */
+
+function camera(){
+
+    /*
+       Tiny camera movement caused by cursor velocity.
+    */
+
+    const vx=mouse.x-mouse.px;
+    const vy=mouse.y-mouse.py;
+
+    const amount=
+        Math.min(8,Math.hypot(vx,vy)*.15);
+
+    ctx.save();
+
+    ctx.translate(
+        (mouse.x-W/2)*-.008*amount,
+        (mouse.y-H/2)*-.008*amount
+    );
+
+    ctx.rotate(
+        vx*.00015
+    );
+}
+
+
+/* =========================================================
+   MAIN LOOP
+   ========================================================= */
+
+let start=performance.now();
+
+function loop(t){
+
+    /*
+       Long persistence gives the world a physical trail.
+    */
+
+    ctx.fillStyle="rgba(0,0,3,.18)";
+    ctx.fillRect(0,0,W,H);
+
+    physics();
+
+    camera();
+
+    drawParticles();
+    drawRings(t);
+    drawMachine(t);
+
+    ctx.restore();
+
+    fx.clearRect(0,0,W,H);
+
+    drawSparks();
+    drawTears();
+    drawWells(t);
+
+    /*
+       UI telemetry.
+    */
+
+    document.getElementById("nodes").textContent=
+        String(particles.length).padStart(3,"0");
+
+    energy=Math.max(
+        0,
+        Math.min(
+            100,
+            energy+
+            (mouse.down?-0.025:.012)
+        )
+    );
+
+    document.getElementById("energy").textContent=
+        String(Math.floor(energy)).padStart(3,"0");
+
+    const elapsed=t-start;
+
+    const hh=Math.floor(elapsed/3600000);
+    const mm=Math.floor(elapsed/60000)%60;
+    const ss=Math.floor(elapsed/1000)%60;
+
+    document.getElementById("clock").textContent=
+        [hh,mm,ss]
+        .map(v=>String(v).padStart(2,"0"))
+        .join(":");
+
+    requestAnimationFrame(loop);
+}
+
+requestAnimationFrame(loop);
+
+
+/* =========================================================
+   BOOT
+   ========================================================= */
+
+setTimeout(()=>{
+    document.getElementById("boot").classList.add("done");
+    say("TOUCH THE MACHINE");
+},2200);
+
+
+/* =========================================================
+   EASTER EGG:
+   Hold the mouse almost perfectly still over the core.
+   ========================================================= */
+
+let stillSince=performance.now();
+
+addEventListener("pointermove",()=>{
+    stillSince=performance.now();
+});
+
+setInterval(()=>{
+
+    if(
+        performance.now()-stillSince>4500 &&
+        Math.hypot(
+            mouse.x-W/2,
+            mouse.y-H/2
+        )<120
+    ){
+
+        say("IT IS LOOKING BACK");
+
+        impact(W/2,H/2,40);
+
+        stillSince=performance.now()+100000;
+    }
+
+},500);
+
+</script>
+</body>
+</html>
