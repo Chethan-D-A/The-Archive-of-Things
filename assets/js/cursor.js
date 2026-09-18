@@ -8,9 +8,12 @@
      * Custom cursor
      */
 
+    let cursor = null;
+
+
     if (finePointer) {
 
-        const cursor =
+        cursor =
             document.createElement("div");
 
         cursor.className =
@@ -33,11 +36,8 @@
             "mousemove",
             event => {
 
-                targetX =
-                    event.clientX;
-
-                targetY =
-                    event.clientY;
+                targetX = event.clientX;
+                targetY = event.clientY;
 
             },
             { passive: true }
@@ -60,9 +60,7 @@
                 `${y}px`;
 
 
-            requestAnimationFrame(
-                animate
-            );
+            requestAnimationFrame(animate);
 
         }
 
@@ -151,16 +149,19 @@
 
 
     /*
- * Rendering Artifact Disclosure
- *
- * RAD exists only on the Home page.
- */
+     * Rendering Artifact Disclosure
+     *
+     * RAD exists only on the Home page.
+     */
 
-const homePage =
-    document.querySelector(".home-shell");
+    const homePage =
+        document.querySelector(".home-shell");
 
 
-if (homePage) {
+    if (!homePage) {
+        return;
+    }
+
 
     const publicationsButton =
         homePage.querySelector(
@@ -168,140 +169,145 @@ if (homePage) {
         );
 
 
-    if (publicationsButton) {
-
-        const trigger =
-            document.createElement("button");
-
-        trigger.className =
-            "rad-trigger";
-
-        trigger.type =
-            "button";
-
-        trigger.textContent =
-            "RAD";
-
-        trigger.setAttribute(
-            "aria-label",
-            "Rendering Artifact Disclosure"
-        );
+    if (!publicationsButton) {
+        return;
+    }
 
 
-        const panel =
-            document.createElement("aside");
+    const trigger =
+        document.createElement("button");
 
-        panel.className =
-            "rad-panel";
+    trigger.className =
+        "rad-trigger";
 
-        panel.innerHTML = `
-            <h2 class="rad-panel-title">
-                Rendering Artifact Disclosure
-            </h2>
+    trigger.type =
+        "button";
 
-            <p class="rad-panel-text">
-                If you are viewing the Archive in Firefox
-                and notice a faint dotted trail following
-                the cursor, it is a browser-specific
-                rendering artifact affecting the custom
-                cursor. The trail is not intentionally
-                rendered by the Archive.
-                <br><br>
-                Chromium-based browsers, including Brave
-                and Edge, do not exhibit this effect in
-                our testing. The Archive and its
-                interactives remain fully functional.
-            </p>
-        `;
+    trigger.textContent =
+        "RAD";
+
+    trigger.setAttribute(
+        "aria-label",
+        "Rendering Artifact Disclosure"
+    );
+
+    trigger.setAttribute(
+        "aria-expanded",
+        "false"
+    );
 
 
-        publicationsButton.insertAdjacentElement(
-            "afterend",
-            trigger
-        );
+    const panel =
+        document.createElement("aside");
+
+    panel.className =
+        "rad-panel";
+
+    panel.innerHTML = `
+        <h2 class="rad-panel-title">
+            Rendering Artifact Disclosure
+        </h2>
+
+        <p class="rad-panel-text">
+            If you are viewing the Archive in Firefox
+            and notice a faint dotted trail following
+            the cursor, it is a browser-specific
+            rendering artifact affecting the custom
+            cursor. The trail is not intentionally
+            rendered by the Archive.
+            <br><br>
+            Chromium-based browsers, including Brave
+            and Edge, do not exhibit this effect in
+            our testing. The Archive and its
+            interactives remain fully functional.
+        </p>
+    `;
 
 
-        homePage.appendChild(panel);
+    /*
+     * Put RAD directly beneath Publications.
+     */
+
+    publicationsButton.insertAdjacentElement(
+        "afterend",
+        trigger
+    );
 
 
-        trigger.addEventListener(
-            "click",
-            () => {
+    homePage.appendChild(panel);
 
-                const open =
-                    panel.classList.toggle(
-                        "is-open"
-                    );
+
+    trigger.addEventListener(
+        "click",
+        event => {
+
+            event.stopPropagation();
+
+
+            const open =
+                panel.classList.toggle(
+                    "is-open"
+                );
+
+
+            trigger.setAttribute(
+                "aria-expanded",
+                String(open)
+            );
+
+        }
+    );
+
+
+    document.addEventListener(
+        "click",
+        event => {
+
+            if (
+                event.target !== trigger &&
+                !panel.contains(event.target)
+            ) {
+
+                panel.classList.remove(
+                    "is-open"
+                );
 
                 trigger.setAttribute(
                     "aria-expanded",
-                    String(open)
+                    "false"
+                );
+
+            }
+
+        }
+    );
+
+
+    if (finePointer && cursor) {
+
+        trigger.addEventListener(
+            "mouseenter",
+            () => {
+
+                cursor.classList.add(
+                    "is-hovering"
                 );
 
             }
         );
 
 
-        document.addEventListener(
-            "click",
-            event => {
+        trigger.addEventListener(
+            "mouseleave",
+            () => {
 
-                if (
-                    event.target !== trigger &&
-                    !panel.contains(event.target)
-                ) {
-
-                    panel.classList.remove(
-                        "is-open"
-                    );
-
-                }
+                cursor.classList.remove(
+                    "is-hovering"
+                );
 
             }
         );
 
-
-        if (finePointer) {
-
-            trigger.addEventListener(
-                "mouseenter",
-                () => {
-
-                    const cursor =
-                        document.querySelector(
-                            ".tat-cursor"
-                        );
-
-                    if (cursor) {
-                        cursor.classList.add(
-                            "is-hovering"
-                        );
-                    }
-
-                }
-            );
-
-
-            trigger.addEventListener(
-                "mouseleave",
-                () => {
-
-                    const cursor =
-                        document.querySelector(
-                            ".tat-cursor"
-                        );
-
-                    if (cursor) {
-                        cursor.classList.remove(
-                            "is-hovering"
-                        );
-                    }
-
-                }
-            );
-
-        }
-
     }
 
-}
+})();
