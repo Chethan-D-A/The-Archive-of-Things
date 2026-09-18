@@ -1,1 +1,188 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
 
+<title>The Archive of Things</title>
+
+<style>
+    * {
+        box-sizing: border-box;
+    }
+
+    html, body {
+        margin: 0;
+        padding: 0;
+        background: #0b0b0b;
+        color: #e8e1d5;
+        font-family: Georgia, "Times New Roman", serif;
+    }
+
+    body {
+        min-height: 100vh;
+    }
+
+    main {
+        width: min(1100px, calc(100% - 40px));
+        margin: 0 auto;
+        padding: 80px 0;
+    }
+
+    header {
+        border-bottom: 1px solid #302f2b;
+        padding-bottom: 40px;
+        margin-bottom: 55px;
+    }
+
+    .eyebrow {
+        font-family: monospace;
+        font-size: 11px;
+        letter-spacing: 4px;
+        color: #b79a63;
+        margin-bottom: 20px;
+    }
+
+    h1 {
+        font-size: clamp(42px, 7vw, 76px);
+        font-weight: 400;
+        line-height: 1;
+        margin: 0 0 22px;
+    }
+
+    .description {
+        max-width: 650px;
+        color: #a9a39a;
+        font-size: 18px;
+        line-height: 1.7;
+    }
+
+    .section-label {
+        font-family: monospace;
+        font-size: 10px;
+        letter-spacing: 3px;
+        color: #786344;
+        margin-bottom: 20px;
+    }
+
+    .collection {
+        border-top: 1px solid #302f2b;
+    }
+
+    .entry {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        gap: 30px;
+        padding: 28px 0;
+        border-bottom: 1px solid #302f2b;
+        text-decoration: none;
+        color: inherit;
+        transition: padding-left .2s ease, background .2s ease;
+    }
+
+    .entry:hover {
+        padding-left: 12px;
+    }
+
+    .entry-title {
+        font-size: 25px;
+        margin-bottom: 8px;
+    }
+
+    .entry-description {
+        font-family: Arial, Helvetica, sans-serif;
+        font-size: 13px;
+        color: #8d8982;
+        line-height: 1.5;
+    }
+
+    .entry-type {
+        flex-shrink: 0;
+        font-family: monospace;
+        font-size: 9px;
+        letter-spacing: 2px;
+        color: #b79a63;
+    }
+
+    footer {
+        margin-top: 80px;
+        padding-top: 25px;
+        border-top: 1px solid #302f2b;
+        font-family: monospace;
+        font-size: 9px;
+        letter-spacing: 2px;
+        color: #5f5b55;
+    }
+
+    @media (max-width: 600px) {
+        main {
+            width: min(100% - 28px, 1100px);
+            padding: 50px 0;
+        }
+
+        .entry {
+            align-items: flex-start;
+            flex-direction: column;
+            gap: 15px;
+        }
+    }
+</style>
+</head>
+
+<body>
+
+<main>
+
+    <header>
+        <div class="eyebrow">THE ARCHIVE OF THINGS</div>
+
+        <h1>Things to explore,<br>experiment with,<br>and understand.</h1>
+
+        <div class="description">
+            A curated collection of interactive things built to make
+            ideas tangible. Explore them, manipulate them, and see
+            what happens.
+        </div>
+    </header>
+
+    <section>
+
+        <div class="section-label">
+            VISUALLY BLESSING
+        </div>
+
+        <div class="collection">
+
+            <a
+                class="entry"
+                href="./visually%20blessing/void-machine/"
+            >
+                <div>
+                    <div class="entry-title">
+                        Void Machine
+                    </div>
+
+                    <div class="entry-description">
+                        An interactive experiment in particles,
+                        gravity, dimensions, and emergent motion.
+                    </div>
+                </div>
+
+                <div class="entry-type">
+                    INTERACTIVE
+                </div>
+            </a>
+
+        </div>
+
+    </section>
+
+    <footer>
+        THE ARCHIVE OF THINGS · OPEN COLLECTION
+    </footer>
+
+</main>
+
+</body>
+</html>
