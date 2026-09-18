@@ -72,7 +72,7 @@ body {
 
     transform: translate3d(-50%, -50%, 0);
 
-    will-change: transform, width, height;
+    will-change: left, top, width, height;
 
     transition:
         width 220ms cubic-bezier(.22, 1, .36, 1),
