@@ -1,0 +1,1196 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>The Convenience Machine</title>
+<style>
+:root{
+  --black:#0B0B0A;
+  --ivory:#E8E1D5;
+  --brass:#B79A63;
+  --bronze:#786344;
+  --aubergine:#30232F;
+  --line:rgba(232,225,213,.14);
+  --line2:rgba(183,154,99,.42);
+  --muted:rgba(232,225,213,.62);
+  --dim:rgba(232,225,213,.40);
+  --panel:rgba(255,255,255,.018);
+}
+*{box-sizing:border-box}
+html{scroll-behavior:smooth}
+body{
+  margin:0;background:var(--black);color:var(--ivory);
+  font-family:Inter,ui-sans-serif,system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;
+  font-size:14px;line-height:1.5;
+}
+button,input{font:inherit}
+button{color:inherit}
+.app{max-width:1500px;margin:0 auto;padding:28px 30px 80px}
+.topbar{display:flex;justify-content:space-between;align-items:flex-start;gap:20px;margin-bottom:28px}
+.kicker,.section-label{
+  color:var(--brass);text-transform:uppercase;letter-spacing:.16em;font-size:11px;font-weight:700
+}
+h1,h2,h3{font-family:Georgia,"Times New Roman",serif;font-weight:400;line-height:1.1;margin:0}
+h1{font-size:clamp(34px,4vw,60px);letter-spacing:-.025em}
+.subtitle{max-width:720px;color:var(--muted);margin-top:12px;font-size:15px}
+.help-btn,.mode-btn{
+  border:1px solid var(--line2);background:transparent;padding:10px 14px;cursor:pointer;
+  transition:.18s ease
+}
+.help-btn:hover,.mode-btn:hover,.preset:hover,.strategy:hover,.stress-btn:hover,.mini-btn:hover{background:rgba(183,154,99,.08);border-color:var(--brass)}
+.modebar{display:flex;gap:6px;margin:20px 0 28px;align-items:center}
+.mode-btn.active{background:var(--brass);color:var(--black);border-color:var(--brass)}
+.reset-btn{
+  margin-left:auto;
+  border:1px solid var(--line2);
+  background:transparent;
+  padding:10px 14px;
+  cursor:pointer;
+  transition:.18s ease;
+}
+.reset-btn:hover{
+  background:rgba(183,154,99,.08);
+  border-color:var(--brass);
+}
+.panel{
+  border:1px solid var(--line);background:var(--panel);padding:22px;
+}
+.grid{display:grid;gap:18px}
+.grid.two{grid-template-columns:repeat(2,minmax(0,1fr))}
+.grid.three{grid-template-columns:repeat(3,minmax(0,1fr))}
+.grid.four{grid-template-columns:repeat(4,minmax(0,1fr))}
+@media(max-width:1050px){.grid.four{grid-template-columns:repeat(2,minmax(0,1fr))}}
+@media(max-width:800px){.grid.two,.grid.three,.grid.four{grid-template-columns:1fr}.app{padding:20px 14px 60px}}
+.section{margin-top:28px}
+.section-head{display:flex;justify-content:space-between;align-items:end;gap:20px;margin-bottom:14px}
+.section-head p{margin:0;color:var(--muted);font-size:13px}
+.market-layout{display:grid;grid-template-columns:minmax(0,1.15fr) minmax(420px,.85fr);gap:28px;align-items:stretch}
+.market-controls{min-width:0}
+.live-output{min-width:0;display:flex;flex-direction:column;justify-content:flex-start;gap:14px;border-left:1px solid var(--line);padding-left:28px}
+.live-output-head{display:flex;justify-content:space-between;align-items:center;gap:15px;padding-bottom:4px}
+.live-output-head .section-label{margin:0}
+.live-output .metrics{grid-template-columns:repeat(2,minmax(0,1fr))}
+.live-output .metric{min-height:86px}
+.live-output .metric-value{font-size:25px}
+.live-analysis{margin-top:0}
+@media(max-width:1100px){.market-layout{grid-template-columns:minmax(0,1fr) minmax(360px,.9fr);gap:22px}.live-output{padding-left:22px}}
+@media(max-width:800px){.market-layout{grid-template-columns:1fr}.live-output{border-left:0;border-top:1px solid var(--line);padding-left:0;padding-top:22px}}
+.controls{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:16px 24px}
+@media(max-width:800px){.controls{grid-template-columns:1fr}}
+.control{padding:2px 0}
+.control-top{display:flex;justify-content:space-between;gap:15px;margin-bottom:7px}
+.control-name{font-weight:600}
+.value{font-variant-numeric:tabular-nums;color:var(--brass);font-weight:700}
+.control-note{font-size:11px;color:var(--dim);margin-top:6px}
+input[type=range]{width:100%;accent-color:var(--brass);cursor:pointer}
+input[type=range]::-webkit-slider-runnable-track{height:3px;background:rgba(232,225,213,.18)}
+input[type=range]::-webkit-slider-thumb{margin-top:-5px}
+.presets{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
+@media(max-width:600px){.presets{grid-template-columns:1fr}}
+.preset,.strategy,.stress-btn,.mini-btn{
+  text-align:left;background:transparent;border:1px solid var(--line);padding:14px;cursor:pointer;transition:.18s ease
+}
+.preset strong,.strategy strong{display:block;font-family:Georgia,serif;font-size:17px;font-weight:400;margin-bottom:4px}
+.preset span,.strategy span{display:block;color:var(--muted);font-size:12px}
+.strategy-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px}
+@media(max-width:800px){.strategy-grid{grid-template-columns:1fr}}
+.strategy.active{border-color:var(--brass);background:rgba(183,154,99,.07)}
+.strategy strong{font-size:22px}
+.metrics{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px}
+@media(max-width:950px){.metrics{grid-template-columns:repeat(2,minmax(0,1fr))}}
+@media(max-width:520px){.metrics{grid-template-columns:1fr}}
+.metric{border:1px solid var(--line);padding:15px;min-height:94px}
+.metric-label{color:var(--muted);font-size:11px;text-transform:uppercase;letter-spacing:.1em}
+.metric-value{font-size:28px;margin-top:5px;font-family:Georgia,serif;font-variant-numeric:tabular-nums}
+.metric-sub{font-size:11px;color:var(--dim);margin-top:4px}
+.flow{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:8px}
+@media(max-width:850px){.flow{grid-template-columns:repeat(2,minmax(0,1fr))}}
+.flow-step{border:1px solid var(--line);padding:15px;position:relative}
+.flow-step:not(:last-child)::after{content:"→";position:absolute;right:-8px;top:50%;transform:translateY(-50%);color:var(--brass);z-index:2}
+@media(max-width:850px){.flow-step:not(:last-child)::after{display:none}}
+.flow-n{font-size:10px;color:var(--brass);letter-spacing:.12em}
+.flow-title{font-family:Georgia,serif;font-size:18px;margin:5px 0}
+.flow-text{font-size:11px;color:var(--muted)}
+.analysis{border-left:2px solid var(--brass);padding:14px 18px;background:rgba(183,154,99,.04)}
+.analysis strong{font-family:Georgia,serif;font-size:19px;font-weight:400}
+.analysis p{margin:6px 0 0;color:var(--muted)}
+.state{display:flex;align-items:center;gap:10px}
+.state-dot{width:9px;height:9px;border:1px solid var(--brass);background:var(--brass)}
+.state.tight .state-dot{background:transparent}
+.state.strained .state-dot{background:var(--aubergine);border-color:var(--brass)}
+.state.overloaded .state-dot{background:var(--ivory);border-color:var(--ivory)}
+.state-label{font-family:Georgia,serif;font-size:21px}
+.table-wrap{overflow-x:auto}
+table{width:100%;border-collapse:collapse;font-variant-numeric:tabular-nums}
+th,td{padding:9px 4px;border-bottom:1px solid rgba(232,225,213,.09)}
+th{text-align:left;color:var(--muted);font-size:11px;font-weight:500}
+td:last-child,th:last-child{text-align:right}
+td:first-child{font-size:12px}
+td:last-child{font-weight:600;color:var(--ivory)}
+.total td{font-weight:700;border-top:1px solid var(--line2)}
+.advanced-center{max-width:1180px;margin:0 auto}
+.advanced-block{display:flex;justify-content:center;align-items:center}
+.advanced-block > .panel{width:100%;max-width:1120px}
+.audit{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}
+@media(max-width:750px){.audit{grid-template-columns:1fr}}
+.audit-row{border:1px solid var(--line);padding:10px 12px;display:flex;justify-content:space-between;gap:12px}
+.audit-ok{color:var(--brass)}
+.audit-bad{color:var(--ivory)}
+.eq{
+  border:1px solid var(--line);padding:12px 14px;margin-top:8px;
+  font-family:"SFMono-Regular",Consolas,monospace;font-size:12px;color:var(--muted);overflow:auto
+}
+.eq b{color:var(--ivory)}
+.sensitivity td,.sensitivity th{text-align:center}
+.sensitivity td:first-child,.sensitivity th:first-child{text-align:left}
+.delta-pos{color:var(--brass)!important}.delta-neg{color:var(--ivory)!important}
+.scenario-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
+@media(max-width:750px){.scenario-grid{grid-template-columns:1fr}}
+.scenario{border:1px solid var(--line);padding:14px}
+.scenario h4{font-family:Georgia,serif;font-size:17px;font-weight:400;margin:0 0 8px}
+.scenario-line{display:flex;justify-content:space-between;color:var(--muted);font-size:12px;padding:3px 0}
+.scenario-line b{color:var(--ivory);font-variant-numeric:tabular-nums}
+.flywheel{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:8px}
+@media(max-width:900px){.flywheel{grid-template-columns:repeat(2,minmax(0,1fr))}}
+.fly{border:1px solid var(--line);padding:14px;text-align:center}
+.fly strong{font-family:Georgia,serif;font-weight:400;font-size:17px}
+.fly small{display:block;color:var(--muted);margin-top:4px}
+.stress-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px}
+@media(max-width:800px){.stress-grid{grid-template-columns:1fr}}
+.counterfactual{display:grid;grid-template-columns:1fr auto 1fr;align-items:center;gap:14px}
+@media(max-width:750px){.counterfactual{grid-template-columns:1fr}}
+.cf-box{border:1px solid var(--line);padding:15px}
+.cf-arrow{text-align:center;color:var(--brass);font-size:25px}
+.modal-backdrop{position:fixed;inset:0;background:rgba(11,11,10,.82);display:none;align-items:center;justify-content:center;padding:20px;z-index:50}
+.modal-backdrop.open{display:flex}
+.modal{max-width:900px;max-height:88vh;overflow:auto;background:var(--black);border:1px solid var(--line2);padding:28px}
+.modal-head{display:flex;justify-content:space-between;gap:20px;align-items:start}
+.close{background:none;border:1px solid var(--line);padding:7px 11px;cursor:pointer}
+.modal h2{font-size:31px}.modal h3{font-size:21px;margin-top:25px}
+.modal p,.modal li{color:var(--muted)}
+hr{border:0;border-top:1px solid var(--line);margin:22px 0}
+.hidden{display:none!important}
+.mini-actions{display:flex;gap:8px;flex-wrap:wrap}
+.badge{display:inline-block;border:1px solid var(--line2);padding:4px 7px;font-size:10px;text-transform:uppercase;letter-spacing:.1em;color:var(--brass)}
+footer{margin-top:45px;color:var(--dim);font-size:11px;text-align:center}
+/* LIVE FRICTION ABSORPTION MAP */
+.friction-map{margin-top:28px;padding-top:22px;border-top:1px solid var(--line)}
+.friction-map-head{display:flex;justify-content:space-between;align-items:flex-end;gap:15px;margin-bottom:17px}
+.friction-map-title{font-family:Georgia,"Times New Roman",serif;font-size:22px;font-weight:400;margin-top:3px}
+.friction-map-note{color:var(--muted);font-size:11px;max-width:390px;text-align:right}
+.friction-list{display:grid;gap:12px}
+.friction-row{display:grid;grid-template-columns:118px minmax(0,1fr) 175px;align-items:center;gap:13px}
+.friction-name{font-size:12px;font-weight:600}
+.friction-track{height:5px;background:rgba(232,225,213,.10);overflow:hidden}
+.friction-fill{height:100%;width:0;background:var(--brass);transition:width .12s linear}
+.friction-meta{min-width:0;display:flex;justify-content:space-between;align-items:center;gap:8px}
+.friction-value{color:var(--brass);font-variant-numeric:tabular-nums;font-weight:700;font-size:11px}
+.friction-mechanism{color:var(--muted);font-size:10px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.friction-strategy{margin-top:17px;padding-top:14px;border-top:1px solid rgba(232,225,213,.09);display:flex;justify-content:space-between;align-items:center;gap:15px}
+.friction-strategy-text{color:var(--muted);font-size:11px}
+.friction-strategy-value{color:var(--brass);font-family:Georgia,"Times New Roman",serif;font-size:17px;white-space:nowrap}
+@media(max-width:900px){.friction-row{grid-template-columns:110px minmax(0,1fr)}.friction-meta{grid-column:2}.friction-mechanism{flex:1}}
+@media(max-width:650px){.friction-map-head{display:block}.friction-map-note{text-align:left;margin-top:5px}.friction-row{grid-template-columns:1fr;gap:6px}.friction-meta{grid-column:auto}}
+
+
+/* =========================================================
+   MODE TRANSITION / ADVANCED ORIENTATION
+   ========================================================= */
+.mode-notice{
+  display:none;
+  margin:-12px 0 24px;
+  border:1px solid var(--line2);
+  background:rgba(183,154,99,.045);
+  padding:14px 16px;
+  align-items:flex-start;
+  justify-content:space-between;
+  gap:20px;
+  scroll-margin-top:24px;
+}
+.mode-notice.show{display:flex}
+.mode-notice-copy{min-width:0}
+.mode-notice-title{
+  color:var(--brass);
+  text-transform:uppercase;
+  letter-spacing:.14em;
+  font-size:10px;
+  font-weight:700;
+  margin-bottom:3px;
+}
+.mode-notice-text{
+  color:var(--muted);
+  font-size:12px;
+}
+.mode-notice-arrow{
+  color:var(--brass);
+  font-size:18px;
+  line-height:1;
+  flex:0 0 auto;
+}
+.advanced-intro{
+  border:1px solid var(--line2);
+  background:rgba(183,154,99,.035);
+  padding:22px;
+  margin-top:28px;
+  scroll-margin-top:24px;
+}
+.advanced-intro h2{margin-top:4px}
+.advanced-intro p{
+  max-width:800px;
+  margin:9px 0 0;
+  color:var(--muted);
+}
+.advanced-intro strong{color:var(--ivory)}
+
+/* =========================================================
+   EXPANDED HELP MANUAL
+   ========================================================= */
+.help-lead{
+  color:var(--ivory)!important;
+  font-size:15px;
+  line-height:1.65;
+}
+.help-section{
+  margin-top:28px;
+}
+.help-section h3{
+  margin-top:0;
+  margin-bottom:8px;
+}
+.help-section p{margin:7px 0}
+.help-section ul{margin:8px 0 0;padding-left:20px}
+.help-grid{
+  display:grid;
+  grid-template-columns:repeat(2,minmax(0,1fr));
+  gap:8px;
+  margin-top:10px;
+}
+.help-card{
+  border:1px solid var(--line);
+  padding:13px 14px;
+}
+.help-card strong{
+  display:block;
+  color:var(--ivory);
+  margin-bottom:4px;
+}
+.help-card span{
+  display:block;
+  color:var(--muted);
+  font-size:12px;
+}
+.help-step{
+  display:grid;
+  grid-template-columns:30px 1fr;
+  gap:10px;
+  align-items:start;
+  margin:9px 0;
+}
+.help-step-number{
+  width:25px;
+  height:25px;
+  border:1px solid var(--line2);
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  color:var(--brass);
+  font-size:11px;
+  font-weight:700;
+}
+.help-step-text{color:var(--muted)}
+.help-note{
+  border-left:2px solid var(--brass);
+  background:rgba(183,154,99,.04);
+  padding:12px 15px;
+  margin-top:12px;
+}
+.help-note strong{font-family:Georgia,serif;font-weight:400;font-size:17px}
+.help-note p{margin:5px 0 0}
+@media(max-width:700px){
+  .help-grid{grid-template-columns:1fr}
+  .mode-notice{padding:12px}
+}
+
+</style>
+</head>
+<body>
+<div class="app">
+  <header class="topbar">
+    <div>
+      <div class="kicker">A&D / Interactive Visuals</div>
+      <h1>The Convenience Machine</h1>
+      <div class="subtitle">Operate a simplified convenience business. Change the promise, demand, customer value and operating system. The machine shows where friction goes — and what that relocation costs.</div>
+    </div>
+    <button class="help-btn" id="helpBtn">How it works</button>
+  </header>
+
+  <div class="modebar">
+    <button class="mode-btn active" data-mode="essential">Essential</button>
+    <button class="mode-btn" data-mode="advanced">Advanced</button>
+    <span class="badge">Same model / different depth</span>
+    <button class="reset-btn" id="resetBtn">Reset</button>
+  </div>
+
+  <div class="mode-notice" id="modeNotice" aria-live="polite">
+    <div class="mode-notice-copy">
+      <div class="mode-notice-title" id="modeNoticeTitle">Essential mode active</div>
+      <div class="mode-notice-text" id="modeNoticeText">You are viewing the simplified layer. Adjust the controls and follow the immediate consequences.</div>
+    </div>
+    <div class="mode-notice-arrow" aria-hidden="true">↓</div>
+  </div>
+
+  <section class="section">
+    <div class="section-head">
+      <div>
+        <div class="section-label">01 / Market</div>
+        <h2>Set the environment</h2>
+      </div>
+      <p>Change an input and see its economic consequence immediately.</p>
+    </div>
+
+    <div class="panel">
+      <div class="market-layout">
+        <div class="market-controls">
+          <div class="controls">
+            <div class="control"><div class="control-top"><span class="control-name">Demand density</span><span class="value" id="densityVal">50%</span></div><input id="density" type="range" min="0" max="100" step="1" value="50"><div class="control-note">How many potential orders exist in a compact operating area.</div></div>
+            <div class="control"><div class="control-top"><span class="control-name">Order frequency</span><span class="value" id="frequencyVal">50%</span></div><input id="frequency" type="range" min="0" max="100" step="1" value="50"><div class="control-note">How repeatedly customers generate orders.</div></div>
+            <div class="control"><div class="control-top"><span class="control-name">Willingness to pay</span><span class="value" id="wtpVal">$7.00</span></div><input id="wtp" type="range" min="2" max="15" step=".25" value="7"><div class="control-note">The customer's maximum modeled value for escaping friction.</div></div>
+            <div class="control"><div class="control-top"><span class="control-name">Urgency</span><span class="value" id="urgencyVal">50%</span></div><input id="urgency" type="range" min="0" max="100" step="1" value="50"><div class="control-note">How strongly timing affects the customer's value.</div></div>
+            <div class="control"><div class="control-top"><span class="control-name">Delivery promise</span><span class="value" id="speedVal">60</span></div><input id="speed" type="range" min="1" max="120" step="1" value="60"><div class="control-note">Higher values represent a more aggressive speed promise.</div></div>
+            <div class="control"><div class="control-top"><span class="control-name">Inventory proximity</span><span class="value" id="inventoryVal">50%</span></div><input id="inventory" type="range" min="0" max="100" step="1" value="50"><div class="control-note">How close useful inventory is positioned to demand.</div></div>
+            <div class="control"><div class="control-top"><span class="control-name">Courier capacity</span><span class="value" id="capacityVal">60</span></div><input id="capacity" type="range" min="10" max="120" step="1" value="60"><div class="control-note">Available courier capacity units in the modeled operating period.</div></div>
+            <div class="control"><div class="control-top"><span class="control-name">Prediction accuracy</span><span class="value" id="predictionVal">60%</span></div><input id="prediction" type="range" min="0" max="100" step="1" value="60"><div class="control-note">How accurately the system anticipates demand before it arrives.</div></div>
+          </div>
+
+          <div class="friction-map">
+            <div class="friction-map-head">
+              <div>
+                <div class="section-label">Friction absorption</div>
+                <div class="friction-map-title">What the customer escapes</div>
+              </div>
+              <div class="friction-map-note">Live view of the friction being removed from the customer's experience and where the system absorbs it.</div>
+            </div>
+
+            <div class="friction-list">
+              <div class="friction-row">
+                <div class="friction-name">Time</div>
+                <div class="friction-track"><div class="friction-fill" id="frictionTimeBar"></div></div>
+                <div class="friction-meta"><span class="friction-mechanism">Speed infrastructure</span><span class="friction-value" id="frictionTimeVal">0.00%</span></div>
+              </div>
+
+              <div class="friction-row">
+                <div class="friction-name">Physical effort</div>
+                <div class="friction-track"><div class="friction-fill" id="frictionEffortBar"></div></div>
+                <div class="friction-meta"><span class="friction-mechanism">Inventory + fulfilment</span><span class="friction-value" id="frictionEffortVal">0.00%</span></div>
+              </div>
+
+              <div class="friction-row">
+                <div class="friction-name">Uncertainty</div>
+                <div class="friction-track"><div class="friction-fill" id="frictionUncertaintyBar"></div></div>
+                <div class="friction-meta"><span class="friction-mechanism">Prediction + capacity</span><span class="friction-value" id="frictionUncertaintyVal">0.00%</span></div>
+              </div>
+
+              <div class="friction-row">
+                <div class="friction-name">System pressure</div>
+                <div class="friction-track"><div class="friction-fill" id="frictionPressureBar"></div></div>
+                <div class="friction-meta"><span class="friction-mechanism">Courier capacity + density</span><span class="friction-value" id="frictionPressureVal">0.00%</span></div>
+              </div>
+            </div>
+
+            <div class="friction-strategy">
+              <span class="friction-strategy-text">Current friction architecture</span>
+              <span class="friction-strategy-value" id="frictionStrategy">Relocate</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="live-output">
+          <div class="live-output-head">
+            <div><div class="section-label">Live output</div><h3>Operating state</h3></div>
+            <div class="state" id="stateBadge"><span class="state-dot"></span><span class="state-label" id="stateLabel">HEALTHY</span></div>
+          </div>
+
+          <div class="metrics">
+            <div class="metric"><div class="metric-label">Orders</div><div class="metric-value" id="mOrders">55.50</div><div class="metric-sub">modeled orders / period</div></div>
+            <div class="metric"><div class="metric-label">Capacity</div><div class="metric-value" id="mCapacity">78.00</div><div class="metric-sub">available capacity units</div></div>
+            <div class="metric"><div class="metric-label">Utilization</div><div class="metric-value" id="mUtilization">71.15%</div><div class="metric-sub">orders ÷ capacity</div></div>
+            <div class="metric"><div class="metric-label">System cost</div><div class="metric-value" id="mCost">$0.00</div><div class="metric-sub">modeled cost / order</div></div>
+            <div class="metric"><div class="metric-label">Customer value</div><div class="metric-value" id="mValue">$0.00</div><div class="metric-sub">modeled value / customer</div></div>
+            <div class="metric"><div class="metric-label">Revenue</div><div class="metric-value" id="mRevenue">$0.00</div><div class="metric-sub">modeled revenue / order</div></div>
+            <div class="metric"><div class="metric-label">Profit</div><div class="metric-value" id="mProfit">$0.00</div><div class="metric-sub">revenue − system cost</div></div>
+            <div class="metric"><div class="metric-label">Failure risk</div><div class="metric-value" id="mFailure">0.00%</div><div class="metric-sub">modeled operating risk</div></div>
+          </div>
+
+          <div class="analysis live-analysis"><strong id="insightTitle">The machine is absorbing friction.</strong><p id="insightText">Change the inputs and watch where cost, value and uncertainty move.</p></div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section class="section">
+    <div class="section-head">
+      <div>
+        <div class="section-label">Market presets</div>
+        <h2>Start from a recognizable system</h2>
+      </div>
+    </div>
+    <div class="presets">
+      <button class="preset" data-preset="low"><strong>Low-density city</strong><span>Few orders / wide area</span></button>
+      <button class="preset" data-preset="dense"><strong>Dense neighborhood</strong><span>Many orders / compact area</span></button>
+      <button class="preset" data-preset="urgent"><strong>Urgent customer</strong><span>Timing matters heavily</span></button>
+      <button class="preset" data-preset="casual"><strong>Casual customer</strong><span>Timing matters less</span></button>
+    </div>
+  </section>
+
+  <section class="section">
+    <div class="section-head">
+      <div>
+        <div class="section-label">Friction architecture</div>
+        <h2>How do you handle friction?</h2>
+      </div>
+    </div>
+    <div class="strategy-grid">
+      <button class="strategy active" data-strategy="relocate"><strong>Relocate</strong><span>Move the customer's work to workers and infrastructure.</span></button>
+      <button class="strategy" data-strategy="destroy"><strong>Destroy</strong><span>Eliminate steps that no longer need to exist.</span></button>
+      <button class="strategy" data-strategy="preposition"><strong>Pre-position</strong><span>Spend resources before demand appears.</span></button>
+    </div>
+  </section>
+
+  <section class="section">
+    <div class="section-head">
+      <div>
+        <div class="section-label">Inside the machine</div>
+        <h2>What the customer no longer sees</h2>
+      </div>
+    </div>
+    <div class="flow">
+      <div class="flow-step"><div class="flow-n">01</div><div class="flow-title">Want</div><div class="flow-text">A customer creates demand.</div></div>
+      <div class="flow-step"><div class="flow-n">02</div><div class="flow-title">Predict</div><div class="flow-text">The system anticipates where demand will appear.</div></div>
+      <div class="flow-step"><div class="flow-n">03</div><div class="flow-title">Position</div><div class="flow-text">Inventory and capacity are placed around that prediction.</div></div>
+      <div class="flow-step"><div class="flow-n">04</div><div class="flow-title">Fulfil</div><div class="flow-text">Workers and infrastructure absorb the remaining friction.</div></div>
+      <div class="flow-step"><div class="flow-n">05</div><div class="flow-title">Repeat</div><div class="flow-text">Repeated demand can create density and lower unit cost.</div></div>
+    </div>
+  </section>
+
+  <section class="section">
+    <div class="section-head"><div><div class="section-label">Stress test</div><h2>Break the machine</h2></div><p>Apply a defined shock without permanently changing your controls.</p></div>
+    <div class="stress-grid">
+      <button class="stress-btn" data-stress="speed"><strong>Double the promise</strong><br><span>Push delivery speed sharply higher.</span></button>
+      <button class="stress-btn" data-stress="density"><strong>Remove density</strong><br><span>Collapse the demand cluster.</span></button>
+      <button class="stress-btn" data-stress="capacity"><strong>Remove capacity</strong><br><span>Cut available courier capacity.</span></button>
+      <button class="stress-btn" data-stress="prediction"><strong>Damage prediction</strong><br><span>Reduce demand forecasting accuracy.</span></button>
+      <button class="stress-btn" data-stress="inventory"><strong>Pull inventory back</strong><br><span>Move inventory farther from demand.</span></button>
+      <button class="stress-btn" data-stress="urgency"><strong>Increase urgency</strong><br><span>Make timing matter much more.</span></button>
+    </div>
+  </section>
+
+  <section class="section">
+    <div class="section-head"><div><div class="section-label">Flywheel</div><h2>When convenience compounds</h2></div></div>
+    <div class="flywheel">
+      <div class="fly"><strong>Convenience</strong><small>less customer friction</small></div>
+      <div class="fly"><strong>Behavior</strong><small>more repeated usage</small></div>
+      <div class="fly"><strong>Density</strong><small>more orders in the system</small></div>
+      <div class="fly"><strong>Prediction</strong><small>better anticipation</small></div>
+      <div class="fly"><strong>Unit cost</strong><small>more efficient utilization</small></div>
+    </div>
+  </section>
+
+  <section class="section">
+    <div class="section-head"><div><div class="section-label">Counterfactual</div><h2>Remove the convenience</h2></div><p>Same market. No convenience layer.</p></div>
+    <div class="counterfactual">
+      <div class="cf-box"><div class="metric-label">Convenience system</div><div class="metric-value" id="cfConvenience">$0.00</div><div class="metric-sub">modeled customer value</div></div>
+      <div class="cf-arrow">↔</div>
+      <div class="cf-box"><div class="metric-label">No convenience</div><div class="metric-value" id="cfNone">$0.00</div><div class="metric-sub">baseline friction value</div></div>
+    </div>
+  </section>
+
+  <div id="advancedArea" class="hidden">
+    <div class="advanced-intro" id="advancedIntro">
+      <div class="section-label">Advanced mode</div>
+      <h2>The same machine, opened up.</h2>
+      <p>Nothing has changed underneath. <strong>Advanced mode exposes the calculations, decompositions, sensitivities, scenarios and integrity checks behind the same live model.</strong> Scroll through this section to inspect why the machine produces its outputs.</p>
+    </div>
+
+    <div class="advanced-center">
+      <section class="section">
+        <div class="section-head"><div><div class="section-label">Advanced / Audit</div><h2>Unit economics decomposition</h2></div><p>Every component reconciles to total system cost.</p></div>
+        <div class="advanced-block"><div class="panel table-wrap"><table id="costTable"><thead><tr><th>Component</th><th>$/order</th></tr></thead><tbody></tbody></table></div></div>
+      </section>
+
+      <section class="section">
+        <div class="section-head"><div><div class="section-label">Advanced / Audit</div><h2>Customer value decomposition</h2></div><p>Value is calculated before the willingness-to-pay ceiling is applied.</p></div>
+        <div class="advanced-block"><div class="panel table-wrap"><table id="valueTable"><thead><tr><th>Component</th><th>$/customer</th></tr></thead><tbody></tbody></table></div></div>
+      </section>
+
+      <section class="section">
+        <div class="section-head"><div><div class="section-label">Advanced / Operating state</div><h2>Operating state</h2></div></div>
+        <div class="advanced-block"><div class="panel">
+          <div class="metrics">
+            <div class="metric"><div class="metric-label">Utilization</div><div class="metric-value" id="aUtil">0.00%</div><div class="metric-sub">orders / capacity</div></div>
+            <div class="metric"><div class="metric-label">Slack</div><div class="metric-value" id="aSlack">0.00</div><div class="metric-sub">capacity − orders</div></div>
+            <div class="metric"><div class="metric-label">Uncertainty</div><div class="metric-value" id="aUncertainty">0.00%</div><div class="metric-sub">modeled residual uncertainty</div></div>
+            <div class="metric"><div class="metric-label">Efficiency</div><div class="metric-value" id="aEfficiency">0.00%</div><div class="metric-sub">composite operating efficiency</div></div>
+            <div class="metric"><div class="metric-label">Customer surplus</div><div class="metric-value" id="aSurplus">$0.00</div><div class="metric-sub">value − revenue</div></div>
+            <div class="metric"><div class="metric-label">Margin</div><div class="metric-value" id="aMargin">0.00%</div><div class="metric-sub">profit ÷ revenue</div></div>
+            <div class="metric"><div class="metric-label">Bottleneck</div><div class="metric-value" id="aBottleneck" style="font-size:21px">—</div><div class="metric-sub">binding operating constraint</div></div>
+            <div class="metric"><div class="metric-label">Strategy</div><div class="metric-value" id="aStrategy" style="font-size:21px">—</div><div class="metric-sub">friction architecture</div></div>
+          </div>
+        </div></div>
+      </section>
+
+      <section class="section">
+        <div class="section-head"><div><div class="section-label">Advanced / Mathematics</div><h2>Model equations</h2></div><p>Definitions and identities used by the machine.</p></div>
+        <div class="advanced-block"><div class="panel" id="equations"></div></div>
+      </section>
+
+      <section class="section">
+        <div class="section-head"><div><div class="section-label">Advanced / Sensitivity</div><h2>Marginal sensitivity</h2></div><p>Change one input by +10 percentage points while holding all other inputs constant.</p></div>
+        <div class="advanced-block"><div class="panel table-wrap"><table class="sensitivity"><thead><tr><th>Input</th><th>Current</th><th>Test change</th><th>Profit / order</th><th>Δ profit</th></tr></thead><tbody id="sensitivityBody"></tbody></table></div></div>
+      </section>
+
+      <section class="section">
+        <div class="section-head"><div><div class="section-label">Advanced / Comparison</div><h2>Scenario comparison</h2></div><p>Same model, fixed named scenarios. This is descriptive, not a ranking.</p></div>
+        <div class="advanced-block"><div class="panel"><div class="scenario-grid" id="scenarioGrid"></div></div></div>
+      </section>
+
+      <section class="section">
+        <div class="section-head"><div><div class="section-label">Advanced / Integrity</div><h2>Model integrity audit</h2></div><p>Automated consistency checks run on every state update.</p></div>
+        <div class="advanced-block"><div class="panel"><div class="audit" id="auditGrid"></div></div></div>
+      </section>
+    </div>
+  </div>
+
+  <footer>The Convenience Machine is a conceptual economic model. Precision refers to the arithmetic and implementation of the stated assumptions; the coefficients are illustrative, not empirical universal laws.</footer>
+</div>
+
+<div class="modal-backdrop" id="helpModal">
+  <div class="modal">
+
+    <div class="modal-head">
+      <div>
+        <div class="kicker">Operating manual</div>
+        <h2>How the machine works</h2>
+      </div>
+      <button class="close" id="closeHelp">Close</button>
+    </div>
+
+    <hr>
+
+    <p class="help-lead">
+      <b>The Convenience Machine</b> is an interactive model about one simple question: when a business makes life more convenient for a customer, <b>where does the work and uncertainty go?</b>
+    </p>
+
+    <div class="help-section">
+      <h3>1. What is this?</h3>
+      <p>Imagine that you want groceries. You could travel to a store, find the products, wait, carry everything home and spend your own time doing it.</p>
+      <p>A delivery service lets you avoid much of that work. But the work does not magically disappear. Someone still has to predict demand, hold inventory, prepare orders, move them and deliver them.</p>
+      <div class="help-note">
+        <strong>The central idea</strong>
+        <p>Convenience often means that the customer experiences less friction because the system absorbs more friction.</p>
+      </div>
+    </div>
+
+    <div class="help-section">
+      <h3>2. What are you doing?</h3>
+      <p>You are operating the convenience system. Move the sliders and watch the machine respond.</p>
+      <div class="help-grid">
+        <div class="help-card"><strong>Change an input</strong><span>Alter demand, speed, capacity, prediction or customer conditions.</span></div>
+        <div class="help-card"><strong>Watch the live output</strong><span>The numbers on the right update immediately while you move a slider.</span></div>
+        <div class="help-card"><strong>Change the strategy</strong><span>Choose whether friction is relocated, destroyed or pre-positioned against.</span></div>
+        <div class="help-card"><strong>Investigate</strong><span>Use stress tests, the flywheel, the counterfactual and Advanced mode to go deeper.</span></div>
+      </div>
+      <p>There is no single correct setting. The purpose is to discover the trade-offs.</p>
+    </div>
+
+    <div class="help-section">
+      <h3>3. What does every slider mean?</h3>
+      <div class="help-grid">
+        <div class="help-card"><strong>Demand density</strong><span>How concentrated potential orders are. Think of customers spread across a huge area versus many customers close together.</span></div>
+        <div class="help-card"><strong>Order frequency</strong><span>How repeatedly customers generate orders. More repetition can improve how efficiently the system is used.</span></div>
+        <div class="help-card"><strong>Willingness to pay</strong><span>The maximum modeled value the customer places on escaping friction. It is a ceiling on modeled customer value; it is not automatically the price paid.</span></div>
+        <div class="help-card"><strong>Urgency</strong><span>How strongly timing matters to the customer. A more urgent customer places more modeled value on avoiding waiting.</span></div>
+        <div class="help-card"><strong>Delivery promise</strong><span>How aggressively the business promises speed. Higher values represent a faster, more demanding promise. It is a model variable, not a literal number of minutes.</span></div>
+        <div class="help-card"><strong>Inventory proximity</strong><span>How close useful inventory is positioned to demand. Higher proximity can reduce physical friction and improve responsiveness.</span></div>
+        <div class="help-card"><strong>Courier capacity</strong><span>How much fulfilment capacity the system has available during the modeled period.</span></div>
+        <div class="help-card"><strong>Prediction accuracy</strong><span>How accurately the system anticipates demand before it arrives. Better prediction can reduce uncertainty and improve resource positioning.</span></div>
+      </div>
+    </div>
+
+    <div class="help-section">
+      <h3>4. What do the live numbers mean?</h3>
+      <div class="help-grid">
+        <div class="help-card"><strong>Orders</strong><span>The modeled number of orders generated during the operating period.</span></div>
+        <div class="help-card"><strong>Capacity</strong><span>The modeled amount of available fulfilment capacity.</span></div>
+        <div class="help-card"><strong>Utilization</strong><span>How much available capacity is being used. For example, 70 orders using 100 capacity units means 70% utilization.</span></div>
+        <div class="help-card"><strong>System cost</strong><span>The modeled operating cost assigned to one order under the current assumptions.</span></div>
+        <div class="help-card"><strong>Customer value</strong><span>The modeled value the customer receives from escaping friction. It is not necessarily the price the customer pays.</span></div>
+        <div class="help-card"><strong>Revenue</strong><span>The modeled revenue generated per order from the current customer-value and willingness-to-pay assumptions.</span></div>
+        <div class="help-card"><strong>Profit</strong><span>Revenue minus system cost. A negative number means the modeled system costs more per order than the modeled revenue captures.</span></div>
+        <div class="help-card"><strong>Failure risk</strong><span>A modeled operating-risk measure derived from utilization, prediction, speed and strategy. It is not a real-world probability forecast.</span></div>
+      </div>
+    </div>
+
+    <div class="help-section">
+      <h3>5. What does the operating state mean?</h3>
+      <p>The machine turns the current operating conditions into four descriptive states:</p>
+      <div class="help-grid">
+        <div class="help-card"><strong>HEALTHY</strong><span>The modeled system is operating without the stronger pressure conditions used by the model.</span></div>
+        <div class="help-card"><strong>TIGHT</strong><span>Utilization, risk or uncertainty has moved into a meaningful pressure range.</span></div>
+        <div class="help-card"><strong>STRAINED</strong><span>Utilization, risk or uncertainty is materially high.</span></div>
+        <div class="help-card"><strong>OVERLOADED</strong><span>Demand reaches or exceeds modeled capacity, or failure risk reaches the model's highest pressure threshold.</span></div>
+      </div>
+    </div>
+
+    <div class="help-section">
+      <h3>6. What is the Friction Absorption section?</h3>
+      <p>The lower part of the Market block translates the model into the article's main idea: friction does not simply vanish; it is absorbed somewhere in the system.</p>
+      <div class="help-grid">
+        <div class="help-card"><strong>Time</strong><span>Waiting friction is addressed through the speed and fulfilment system.</span></div>
+        <div class="help-card"><strong>Physical effort</strong><span>Work the customer would have performed is shifted toward inventory and fulfilment operations.</span></div>
+        <div class="help-card"><strong>Uncertainty</strong><span>Prediction and positioning absorb some uncertainty before the customer experiences it.</span></div>
+        <div class="help-card"><strong>System pressure</strong><span>Capacity and utilization determine how much operational pressure the system is carrying.</span></div>
+      </div>
+    </div>
+
+    <div class="help-section">
+      <h3>7. What are the three friction strategies?</h3>
+      <div class="help-grid">
+        <div class="help-card"><strong>Relocate</strong><span>The customer's work still exists, but workers and infrastructure perform it instead. Example: you do not drive to the store; a courier does.</span></div>
+        <div class="help-card"><strong>Destroy</strong><span>A step is eliminated rather than transferred. The process itself becomes simpler.</span></div>
+        <div class="help-card"><strong>Pre-position</strong><span>Resources are spent before demand appears. Inventory or capacity is placed in anticipation of future demand.</span></div>
+        <div class="help-card"><strong>The trade-off</strong><span>Pre-positioning can improve responsiveness, but resources can be wasted when predictions are wrong.</span></div>
+      </div>
+    </div>
+
+    <div class="help-section">
+      <h3>8. What are the presets?</h3>
+      <p>Presets are simply starting situations. They do not create special rules or a different model. They move several sliders at once so you can quickly explore a low-density city, a dense neighborhood, an urgent customer or a casual customer.</p>
+    </div>
+
+    <div class="help-section">
+      <h3>9. What are the stress tests?</h3>
+      <p>A stress test temporarily changes one part of the current system and reports what happens. <b>It does not permanently change your sliders.</b></p>
+      <div class="help-grid">
+        <div class="help-card"><strong>Double the promise</strong><span>Push the speed promise upward.</span></div>
+        <div class="help-card"><strong>Remove density</strong><span>Reduce the concentration of demand.</span></div>
+        <div class="help-card"><strong>Remove capacity</strong><span>Reduce available courier capacity.</span></div>
+        <div class="help-card"><strong>Damage prediction</strong><span>Reduce prediction accuracy.</span></div>
+        <div class="help-card"><strong>Pull inventory back</strong><span>Reduce inventory proximity.</span></div>
+        <div class="help-card"><strong>Increase urgency</strong><span>Make timing matter more.</span></div>
+      </div>
+    </div>
+
+    <div class="help-section">
+      <h3>10. What is the flywheel?</h3>
+      <p>Sometimes convenience can reinforce itself. More convenience can encourage more usage. More usage can create greater demand density. Greater density can make prediction and fulfilment more efficient. That can lower unit cost and make more convenience possible.</p>
+      <div class="eq"><b>Convenience → Behavior → Density → Prediction → Unit cost → Convenience</b></div>
+      <p>This is a possible reinforcing loop, not a guarantee that every convenience business experiences it.</p>
+    </div>
+
+    <div class="help-section">
+      <h3>11. What is the counterfactual?</h3>
+      <p>It asks a simple question: <b>what would the modeled customer value look like without the convenience layer?</b> The comparison gives you a baseline for thinking about the value created by the system.</p>
+    </div>
+
+    <div class="help-section">
+      <h3>12. What happens when I switch to Advanced?</h3>
+      <p><b>Nothing about the underlying machine changes.</b> Advanced mode opens the same model and exposes more of its internal structure. When you click Advanced, the page automatically takes you to the beginning of the Advanced section so you know that the mode changed.</p>
+      <div class="help-grid">
+        <div class="help-card"><strong>Unit economics decomposition</strong><span>Shows the individual cost components and reconciles them to total system cost.</span></div>
+        <div class="help-card"><strong>Customer value decomposition</strong><span>Shows time value, physical effort value, uncertainty value, reliability penalty and the willingness-to-pay ceiling.</span></div>
+        <div class="help-card"><strong>Operating state</strong><span>Shows utilization, slack, uncertainty, efficiency, customer surplus, margin, bottleneck and strategy.</span></div>
+        <div class="help-card"><strong>Model equations</strong><span>Shows the mathematical relationships used to generate the outputs.</span></div>
+        <div class="help-card"><strong>Marginal sensitivity</strong><span>Changes one input by a defined amount while keeping the other inputs fixed, then compares the resulting profit per order.</span></div>
+        <div class="help-card"><strong>Scenario comparison</strong><span>Runs named scenarios through the same model. It is descriptive, not a ranking of the scenarios.</span></div>
+        <div class="help-card"><strong>Model integrity audit</strong><span>Checks whether the implementation satisfies its own mathematical identities and bounds.</span></div>
+      </div>
+    </div>
+
+    <div class="help-section">
+      <h3>13. The mathematics in plain English</h3>
+      <p>The machine follows a chain:</p>
+      <div class="eq"><b>Inputs → Operating conditions → Cost / value → Revenue → Profit / risk</b></div>
+      <div class="eq"><b>Utilization</b> = Orders ÷ Capacity × 100</div>
+      <p>If 70 orders use 100 capacity units, utilization is 70%.</p>
+      <div class="eq"><b>Profit</b> = Revenue − System cost</div>
+      <div class="eq"><b>Customer surplus</b> = Customer value − Revenue</div>
+      <div class="eq"><b>Customer value</b> = clamp(Time + Effort + Uncertainty − Reliability penalty, 0, WTP)</div>
+      <p>When the model says <b>clamp</b>, it simply means that the result cannot go below or above a specified boundary. For example, if calculated customer value were $18 but willingness to pay were $7, the modeled customer value cannot exceed $7.</p>
+    </div>
+
+    <div class="help-section">
+      <h3>14. What do the numbers NOT mean?</h3>
+      <div class="help-note">
+        <strong>Precise arithmetic is not the same thing as real-world prediction.</strong>
+        <p>The machine is deterministic: the same inputs always produce the same outputs, and Advanced mode exposes the equations. But the coefficients are illustrative modeling assumptions designed to isolate the mechanism discussed in the article.</p>
+      </div>
+      <p>A real delivery company would also have wages, fuel, rent, taxes, spoilage, cancellations, returns, customer acquisition, financing, competition, geography, regulation and many other variables. Those are deliberately outside this model.</p>
+      <p><b>So the calculations are precise; the assumptions are illustrative.</b> The outputs should not be interpreted as forecasts for a real company.</p>
+    </div>
+
+    <div class="help-section">
+      <h3>15. A five-minute first experiment</h3>
+
+      <div class="help-step"><div class="help-step-number">1</div><div class="help-step-text">Start with the default settings and look at the live output on the right.</div></div>
+      <div class="help-step"><div class="help-step-number">2</div><div class="help-step-text">Increase the delivery promise and watch system cost and customer value change.</div></div>
+      <div class="help-step"><div class="help-step-number">3</div><div class="help-step-text">Increase demand density and watch utilization and operating pressure.</div></div>
+      <div class="help-step"><div class="help-step-number">4</div><div class="help-step-text">Reduce prediction accuracy and watch uncertainty and risk.</div></div>
+      <div class="help-step"><div class="help-step-number">5</div><div class="help-step-text">Switch between Relocate, Destroy and Pre-position and observe how the economics move.</div></div>
+      <div class="help-step"><div class="help-step-number">6</div><div class="help-step-text">Open Advanced mode and inspect exactly why the numbers changed.</div></div>
+
+      <div class="help-note">
+        <strong>You do not need to understand economics before using this.</strong>
+        <p>Use the machine first. Watch what changes. Then use the explanations and Advanced mode to understand why.</p>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<script>
+"use strict";
+
+const $ = id => document.getElementById(id);
+const clamp = (x,min,max) => Math.min(max,Math.max(min,x));
+const pct = x => `${x.toFixed(2)}%`;
+const money = x => `${x < 0 ? "−" : ""}$${Math.abs(x).toFixed(2)}`;
+const num = x => Number(x).toFixed(2);
+
+const state = {
+  density:50, frequency:50, wtp:7, urgency:50, speed:60,
+  inventory:50, capacity:60, prediction:60, strategy:"relocate"
+};
+
+const presets = {
+  low:{density:20,frequency:25,wtp:6,urgency:45,speed:45,inventory:25,capacity:55,prediction:40},
+  dense:{density:85,frequency:80,wtp:7,urgency:55,speed:65,inventory:75,capacity:80,prediction:78},
+  urgent:{density:55,frequency:55,wtp:10,urgency:90,speed:90,inventory:65,capacity:70,prediction:70},
+  casual:{density:55,frequency:55,wtp:6,urgency:20,speed:45,inventory:50,capacity:65,prediction:60}
+};
+
+const strategyNames={relocate:"Relocate",destroy:"Destroy",preposition:"Pre-position"};
+
+function speedFactor(speed){
+  if(speed >= 100) return 0.10;
+  if(speed >= 75) return 0.22;
+  if(speed >= 55) return 0.42;
+  if(speed >= 35) return 0.65;
+  if(speed >= 20) return 0.88;
+  return 1.00;
+}
+
+/*
+  MODEL CONTRACT
+  ---------------
+  Inputs are never rounded during calculation.
+  Display rounding happens only in render().
+  Every derived metric is generated once in calculate().
+  All UI components consume the returned object.
+*/
+function calculate(s){
+  const d=s.density/100;
+  const f=s.frequency/100;
+  const u=s.urgency/100;
+  const i=s.inventory/100;
+  const p=s.prediction/100;
+  const sf=speedFactor(s.speed);
+
+  const orders = 8 + 0.95*s.density;
+  const capacity = 15 + 1.05*s.capacity;
+  const utilization = capacity === 0 ? 0 : orders/capacity*100;
+  const slack = capacity-orders;
+
+  const base=4.50;
+  const speedCost=Math.pow(1-sf,2)*9 + 0.50/sf;
+  const inventoryCost=0.90 + Math.pow(i,1.55)*4.20;
+  const idleCapacity=utilization < 65 ? ((65-utilization)/65)*3.80 : 0;
+  const congestion=Math.max(0,utilization-82)*0.13;
+  const predictionCost=0.40 + Math.pow(p,1.5)*1.70;
+  let strategyCost;
+  if(s.strategy==="relocate") strategyCost=2.20;
+  else if(s.strategy==="destroy") strategyCost=1.10;
+  else strategyCost=3.70+(1-p)*2.50;
+
+  const requiredCapacity=s.speed<35 ? 70+(35-s.speed)*2.20 : 0;
+  const capacityPressure=Math.max(0,requiredCapacity-capacity)*0.055;
+
+  const densityEfficiency=d*2.90;
+  const frequencyEfficiency=f*1.90;
+  const predictionBenefit=p*2.50;
+
+  const rawSystemCost=
+    base+speedCost+inventoryCost+idleCapacity+congestion+
+    predictionCost+strategyCost+capacityPressure-
+    densityEfficiency-frequencyEfficiency-predictionBenefit;
+
+  const systemCost=Math.max(0.75,rawSystemCost);
+
+  const timeValue=s.wtp*(1-sf)*0.50;
+  const effortValue=s.wtp*i*0.22;
+  const uncertaintyValue=s.wtp*u*p*0.40;
+  const reliabilityPenalty=Math.max(0,utilization-75)*0.025;
+  const uncappedCustomerValue=timeValue+effortValue+uncertaintyValue-reliabilityPenalty;
+  const customerValue=clamp(uncappedCustomerValue,0,s.wtp);
+
+  const revenue=Math.max(0.50,customerValue*0.68+s.wtp*0.18);
+  const profit=revenue-systemCost;
+  const surplus=customerValue-revenue;
+  const margin=revenue===0?0:profit/revenue*100;
+
+  let failure=Math.max(0,utilization-70)*0.75+(1-p)*20;
+  if(s.speed<30) failure+=(30-s.speed)*0.65;
+  if(s.strategy==="preposition") failure-=p*10;
+  failure=clamp(failure,0,100);
+
+  const uncertainty=clamp(100-p*55-i*15+Math.max(0,utilization-75)*0.70,0,100);
+  const efficiency=clamp(100-(systemCost/Math.max(s.wtp,1))*45-failure*0.25+s.density*0.18,0,100);
+
+  const effectiveCapacityRatio=capacity===0?Infinity:orders/capacity;
+  let operatingState;
+  if(effectiveCapacityRatio>=1 || failure>=75) operatingState="overloaded";
+  else if(utilization>=85 || failure>=50 || uncertainty>=70) operatingState="strained";
+  else if(utilization>=65 || failure>=30 || uncertainty>=50) operatingState="tight";
+  else operatingState="healthy";
+
+  let bottleneck;
+  const candidates={
+    "Demand density":Math.max(0,utilization-82),
+    "Courier capacity":Math.max(0,utilization-75),
+    "Prediction":(1-p)*100,
+    "Inventory proximity":(1-i)*100,
+    "Speed promise":Math.max(0,(s.speed<35?35-s.speed:0)*2)
+  };
+  bottleneck=Object.entries(candidates).sort((a,b)=>b[1]-a[1])[0][0];
+
+  const components=[
+    ["Base operating cost",base],
+    ["Speed cost",speedCost],
+    ["Inventory cost",inventoryCost],
+    ["Idle capacity",idleCapacity],
+    ["Congestion",congestion],
+    ["Prediction cost",predictionCost],
+    ["Strategy cost",strategyCost],
+    ["Capacity pressure",capacityPressure],
+    ["Density efficiency",-densityEfficiency],
+    ["Frequency efficiency",-frequencyEfficiency],
+    ["Prediction benefit",-predictionBenefit]
+  ];
+  const componentSum=components.reduce((a,[,v])=>a+v,0);
+  const costResidual=systemCost-Math.max(0.75,componentSum);
+
+  const valueComponents=[
+    ["Time value",timeValue],
+    ["Physical effort value",effortValue],
+    ["Uncertainty value",uncertaintyValue],
+    ["Reliability penalty",-reliabilityPenalty]
+  ];
+  const valueSum=valueComponents.reduce((a,[,v])=>a+v,0);
+  const valueResidual=customerValue-clamp(valueSum,0,s.wtp);
+
+  const baseline={
+    customerValue:0,
+    revenue:Math.max(0.50,s.wtp*0.18),
+    systemCost:Math.max(0.75,
+      base+
+      (Math.pow(1-1,2)*9+0.50/1)+
+      0.90+
+      0+
+      0+
+      0.40+
+      0+
+      0-
+      densityEfficiency-
+      frequencyEfficiency-
+      0
+    )
+  };
+  baseline.profit=baseline.revenue-baseline.systemCost;
+
+  return {
+    inputs:{...s}, normalized:{d,f,u,i,p,sf},
+    orders,capacity,utilization,slack,
+    costs:{base,speedCost,inventoryCost,idleCapacity,congestion,predictionCost,strategyCost,capacityPressure,densityEfficiency,frequencyEfficiency,predictionBenefit},
+    components,componentSum,costResidual,
+    systemCost,
+    values:{timeValue,effortValue,uncertaintyValue,reliabilityPenalty,uncappedCustomerValue},
+    valueComponents,valueSum,valueResidual,
+    customerValue,revenue,profit,surplus,margin,
+    failure,uncertainty,efficiency,
+    operatingState,bottleneck,
+    requiredCapacity,
+    baseline
+  };
+}
+
+function setInputs(obj){
+  Object.keys(obj).forEach(k=>{
+    if(k in state) state[k]=Number(obj[k]);
+  });
+  syncInputs();
+  render();
+}
+
+function syncInputs(){
+  ["density","frequency","wtp","urgency","speed","inventory","capacity","prediction"].forEach(id=>{
+    $(id).value=state[id];
+  });
+  $("densityVal").textContent=`${state.density}%`;
+  $("frequencyVal").textContent=`${state.frequency}%`;
+  $("wtpVal").textContent=money(state.wtp);
+  $("urgencyVal").textContent=`${state.urgency}%`;
+  $("speedVal").textContent=String(state.speed);
+  $("inventoryVal").textContent=`${state.inventory}%`;
+  $("capacityVal").textContent=String(state.capacity);
+  $("predictionVal").textContent=`${state.prediction}%`;
+  document.querySelectorAll(".strategy").forEach(b=>b.classList.toggle("active",b.dataset.strategy===state.strategy));
+}
+
+
+/* LIVE FRICTION ABSORPTION RENDER */
+function renderFrictionMap(r){
+  const timeFriction=clamp((1-r.normalized.sf)*100,0,100);
+  const effortFriction=clamp((1-r.normalized.i)*100,0,100);
+  const uncertaintyFriction=r.uncertainty;
+  const pressureFriction=clamp((r.utilization-50)/50*100,0,100);
+
+  const rows=[
+    ["frictionTimeBar","frictionTimeVal",timeFriction],
+    ["frictionEffortBar","frictionEffortVal",effortFriction],
+    ["frictionUncertaintyBar","frictionUncertaintyVal",uncertaintyFriction],
+    ["frictionPressureBar","frictionPressureVal",pressureFriction]
+  ];
+
+  rows.forEach(([bar,value,x])=>{
+    $(bar).style.width=`${x}%`;
+    $(value).textContent=pct(x);
+  });
+
+  $("frictionStrategy").textContent=strategyNames[r.inputs.strategy];
+}
+
+function render(){
+  const r=calculate(state);
+
+  renderFrictionMap(r);
+
+  $("mOrders").textContent=num(r.orders);
+  $("mCapacity").textContent=num(r.capacity);
+  $("mUtilization").textContent=pct(r.utilization);
+  $("mCost").textContent=money(r.systemCost);
+  $("mValue").textContent=money(r.customerValue);
+  $("mRevenue").textContent=money(r.revenue);
+  $("mProfit").textContent=money(r.profit);
+  $("mFailure").textContent=pct(r.failure);
+
+  const badge=$("stateBadge");
+  badge.className=`state ${r.operatingState}`;
+  $("stateLabel").textContent=r.operatingState.toUpperCase();
+
+  const insight=makeInsight(r);
+  $("insightTitle").textContent=insight.title;
+  $("insightText").textContent=insight.text;
+
+  $("cfConvenience").textContent=money(r.customerValue);
+  $("cfNone").textContent=money(0);
+
+  renderAdvanced(r);
+}
+
+function makeInsight(r){
+  if(r.operatingState==="overloaded")
+    return {title:"Demand is exceeding the modeled operating envelope.",text:`Utilization is ${pct(r.utilization)} and failure risk is ${pct(r.failure)}. The convenience promise is being supported by insufficient effective capacity.`};
+  if(r.operatingState==="strained")
+    return {title:"The system is strained.",text:`The machine is carrying meaningful operating pressure. Utilization is ${pct(r.utilization)}, uncertainty is ${pct(r.uncertainty)}, and failure risk is ${pct(r.failure)}.`};
+  if(r.profit<0)
+    return {title:"The convenience layer costs more than it captures.",text:`The modeled revenue is ${money(r.revenue)} per order against ${money(r.systemCost)} of system cost. The customer can value the service while the operating model remains uneconomic.`};
+  if(r.customerValue<=0)
+    return {title:"The customer has little modeled value to capture.",text:"The current combination of speed, effort, urgency and prediction produces little measurable customer value."};
+  return {title:"The machine is absorbing friction.",text:`The customer receives ${money(r.customerValue)} of modeled value while the system absorbs ${money(r.systemCost)} of cost per order.`};
+}
+
+function renderAdvanced(r){
+  const costRows=r.components.map(([name,v])=>`<tr><td>${name}</td><td>${money(v)}</td></tr>`).join("");
+  $("costTable").querySelector("tbody").innerHTML=
+    costRows+
+    `<tr class="total"><td>Calculated component sum</td><td>${money(r.componentSum)}</td></tr>`+
+    `<tr><td>Floor adjustment</td><td>${money(r.systemCost-Math.max(0,r.componentSum))}</td></tr>`+
+    `<tr class="total"><td>Total system cost</td><td>${money(r.systemCost)}</td></tr>`;
+
+  const valueRows=r.valueComponents.map(([name,v])=>`<tr><td>${name}</td><td>${money(v)}</td></tr>`).join("");
+  $("valueTable").querySelector("tbody").innerHTML=
+    valueRows+
+    `<tr><td>Uncapped value</td><td>${money(r.uncappedCustomerValue)}</td></tr>`+
+    `<tr><td>Willingness-to-pay ceiling</td><td>${money(r.inputs.wtp)}</td></tr>`+
+    `<tr class="total"><td>Customer value</td><td>${money(r.customerValue)}</td></tr>`;
+
+  $("aUtil").textContent=pct(r.utilization);
+  $("aSlack").textContent=num(r.slack);
+  $("aUncertainty").textContent=pct(r.uncertainty);
+  $("aEfficiency").textContent=pct(r.efficiency);
+  $("aSurplus").textContent=money(r.surplus);
+  $("aMargin").textContent=pct(r.margin);
+  $("aBottleneck").textContent=r.bottleneck;
+  $("aStrategy").textContent=strategyNames[r.inputs.strategy];
+
+  $("equations").innerHTML=`
+    <div class="eq"><b>Orders</b> = 8 + 0.95 × density = ${num(r.orders)}</div>
+    <div class="eq"><b>Capacity</b> = 15 + 1.05 × courier capacity = ${num(r.capacity)}</div>
+    <div class="eq"><b>Utilization</b> = orders ÷ capacity × 100 = ${pct(r.utilization)}</div>
+    <div class="eq"><b>System cost</b> = max(0.75, base + speed + inventory + idle + congestion + prediction + strategy + pressure − density efficiency − frequency efficiency − prediction benefit) = ${money(r.systemCost)}</div>
+    <div class="eq"><b>Customer value</b> = clamp(time + effort + uncertainty − reliability penalty, 0, WTP) = ${money(r.customerValue)}</div>
+    <div class="eq"><b>Revenue</b> = max(0.50, customer value × 0.68 + WTP × 0.18) = ${money(r.revenue)}</div>
+    <div class="eq"><b>Profit</b> = revenue − system cost = ${money(r.profit)}</div>
+    <div class="eq"><b>Customer surplus</b> = customer value − revenue = ${money(r.surplus)}</div>
+    <div class="eq"><b>Failure risk</b> = clamp(utilization pressure + prediction risk + low-speed risk − pre-position protection, 0, 100) = ${pct(r.failure)}</div>
+    <div class="eq"><b>Uncertainty</b> = clamp(100 − prediction × 55 − inventory × 15 + utilization pressure, 0, 100) = ${pct(r.uncertainty)}</div>
+  `;
+
+  const sensitivityInputs=[
+    ["Density","density",`${r.inputs.density}%`,s=>({...s,density:Math.min(100,s.density+10)})],
+    ["Frequency","frequency",`${r.inputs.frequency}%`,s=>({...s,frequency:Math.min(100,s.frequency+10)})],
+    ["Willingness to pay","wtp",money(r.inputs.wtp),s=>({...s,wtp:Math.min(15,s.wtp+1.25)})],
+    ["Urgency","urgency",`${r.inputs.urgency}%`,s=>({...s,urgency:Math.min(100,s.urgency+10)})],
+    ["Delivery promise","speed",String(r.inputs.speed),s=>({...s,speed:Math.min(120,s.speed+10)})],
+    ["Inventory proximity","inventory",`${r.inputs.inventory}%`,s=>({...s,inventory:Math.min(100,s.inventory+10)})],
+    ["Courier capacity","capacity",String(r.inputs.capacity),s=>({...s,capacity:Math.min(120,s.capacity+10)})],
+    ["Prediction accuracy","prediction",`${r.inputs.prediction}%`,s=>({...s,prediction:Math.min(100,s.prediction+10)})]
+  ];
+  $("sensitivityBody").innerHTML=sensitivityInputs.map(([name,key,current,fn])=>{
+    const test=calculate(fn({...state}));
+    const delta=test.profit-r.profit;
+    const deltaClass=delta>=0?"delta-pos":"delta-neg";
+    const change=key==="wtp"?"+$1.25":"+10";
+    return `<tr><td>${name}</td><td>${current}</td><td>${change}</td><td>${money(test.profit)}</td><td class="${deltaClass}">${delta>=0?"+":"−"}${money(Math.abs(delta))}</td></tr>`;
+  }).join("");
+
+  const scenarios=[
+    ["Low-density city",{...state,...presets.low}],
+    ["Dense neighborhood",{...state,...presets.dense}],
+    ["Urgent customer",{...state,...presets.urgent}],
+    ["Casual customer",{...state,...presets.casual}]
+  ];
+  $("scenarioGrid").innerHTML=scenarios.map(([name,s])=>{
+    const x=calculate(s);
+    return `<div class="scenario"><h4>${name}</h4>
+      <div class="scenario-line"><span>Utilization</span><b>${pct(x.utilization)}</b></div>
+      <div class="scenario-line"><span>Customer value</span><b>${money(x.customerValue)}</b></div>
+      <div class="scenario-line"><span>System cost</span><b>${money(x.systemCost)}</b></div>
+      <div class="scenario-line"><span>Profit / order</span><b>${money(x.profit)}</b></div>
+      <div class="scenario-line"><span>Failure risk</span><b>${pct(x.failure)}</b></div>
+      <div class="scenario-line"><span>State</span><b>${x.operatingState.toUpperCase()}</b></div>
+    </div>`;
+  }).join("");
+
+  const checks=[
+    ["Utilization identity",Math.abs(r.utilization-(r.orders/r.capacity*100))<1e-12],
+    ["Cost reconciliation",Math.abs(r.componentSum-r.systemCost)<1e-12 || Math.abs(r.systemCost-.75)<1e-12],
+    ["Customer-value ceiling",r.customerValue>=-1e-12 && r.customerValue<=r.inputs.wtp+1e-12],
+    ["Revenue floor",r.revenue>=0.50-1e-12],
+    ["Profit identity",Math.abs(r.profit-(r.revenue-r.systemCost))<1e-12],
+    ["Surplus identity",Math.abs(r.surplus-(r.customerValue-r.revenue))<1e-12],
+    ["Failure bounds",r.failure>=-1e-12 && r.failure<=100+1e-12],
+    ["Uncertainty bounds",r.uncertainty>=-1e-12 && r.uncertainty<=100+1e-12],
+    ["Efficiency bounds",r.efficiency>=-1e-12 && r.efficiency<=100+1e-12],
+    ["State consistency",(
+      (r.operatingState==="overloaded" && (r.utilization>=100 || r.failure>=75)) ||
+      (r.operatingState==="strained" && r.operatingState!=="overloaded") ||
+      (r.operatingState==="tight" && r.operatingState!=="overloaded" && r.operatingState!=="strained") ||
+      (r.operatingState==="healthy" && r.operatingState!=="overloaded" && r.operatingState!=="strained" && r.operatingState!=="tight")
+    )]
+  ];
+  $("auditGrid").innerHTML=checks.map(([name,ok])=>`<div class="audit-row"><span>${name}</span><b class="${ok?"audit-ok":"audit-bad"}">${ok?"PASS":"CHECK"}</b></div>`).join("");
+}
+
+function bind(){
+  const ids=["density","frequency","wtp","urgency","speed","inventory","capacity","prediction"];
+  ids.forEach(id=>{
+    $(id).addEventListener("input",e=>{
+      state[id]=Number(e.target.value);
+      syncInputs();
+      render();
+    });
+  });
+
+  document.querySelectorAll(".strategy").forEach(b=>b.addEventListener("click",()=>{
+    state.strategy=b.dataset.strategy;
+    syncInputs();render();
+  }));
+
+  document.querySelectorAll(".preset").forEach(b=>b.addEventListener("click",()=>setInputs(presets[b.dataset.preset])));
+
+  document.querySelectorAll(".stress-btn").forEach(b=>b.addEventListener("click",()=>{
+    const temp={...state};
+    switch(b.dataset.stress){
+      case "speed":temp.speed=Math.min(120,state.speed+35);break;
+      case "density":temp.density=Math.max(0,state.density-35);break;
+      case "capacity":temp.capacity=Math.max(10,state.capacity-30);break;
+      case "prediction":temp.prediction=Math.max(0,state.prediction-35);break;
+      case "inventory":temp.inventory=Math.max(0,state.inventory-35);break;
+      case "urgency":temp.urgency=Math.min(100,state.urgency+35);break;
+    }
+    const before=calculate(state),after=calculate(temp);
+    $("insightTitle").textContent=`Stress test: ${b.querySelector("strong").textContent}`;
+    $("insightText").textContent=`Profit moves from ${money(before.profit)} to ${money(after.profit)} per order; utilization moves from ${pct(before.utilization)} to ${pct(after.utilization)} and failure risk from ${pct(before.failure)} to ${pct(after.failure)}. The controls were not permanently changed.`;
+  }));
+
+  $("resetBtn").addEventListener("click",()=>{
+    state.density=50;
+    state.frequency=50;
+    state.wtp=7;
+    state.urgency=50;
+    state.speed=60;
+    state.inventory=50;
+    state.capacity=60;
+    state.prediction=60;
+    state.strategy="relocate";
+    syncInputs();
+    render();
+  });
+
+  document.querySelectorAll(".mode-btn").forEach(b=>b.addEventListener("click",()=>{
+    const mode=b.dataset.mode;
+
+    document.querySelectorAll(".mode-btn").forEach(x=>x.classList.remove("active"));
+    b.classList.add("active");
+
+    const advanced=mode==="advanced";
+    const advancedArea=$("advancedArea");
+    const notice=$("modeNotice");
+    const noticeTitle=$("modeNoticeTitle");
+    const noticeText=$("modeNoticeText");
+
+    advancedArea.classList.toggle("hidden",!advanced);
+    notice.classList.add("show");
+
+    if(advanced){
+      noticeTitle.textContent="Advanced mode active";
+      noticeText.textContent="The same machine is now opened up. The controls and calculations are unchanged; the deeper analysis is below.";
+      notice.querySelector(".mode-notice-arrow").textContent="↓";
+
+      requestAnimationFrame(()=>{
+        $("advancedIntro").scrollIntoView({behavior:"smooth",block:"start"});
+      });
+    }else{
+      noticeTitle.textContent="Essential mode active";
+      noticeText.textContent="You are viewing the simplified layer. Adjust the controls and follow the immediate consequences.";
+      notice.querySelector(".mode-notice-arrow").textContent="↑";
+
+      requestAnimationFrame(()=>{
+        document.querySelector(".market-layout").scrollIntoView({behavior:"smooth",block:"start"});
+      });
+    }
+  }));
+
+  $("helpBtn").addEventListener("click",()=>$("helpModal").classList.add("open"));
+  $("closeHelp").addEventListener("click",()=>$("helpModal").classList.remove("open"));
+  $("helpModal").addEventListener("click",e=>{if(e.target===$("helpModal"))$("helpModal").classList.remove("open")});
+  document.addEventListener("keydown",e=>{if(e.key==="Escape")$("helpModal").classList.remove("open")});
+}
+
+bind();
+syncInputs();
+render();
+</script>
+</body>
+</html>
