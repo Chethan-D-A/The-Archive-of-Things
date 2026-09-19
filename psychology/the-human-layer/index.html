@@ -1,0 +1,945 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1.0">
+<title>The Human Layer — Artificial World Laboratory</title>
+<style>
+:root{
+  --bg:#070807;--panel:#0d100f;--panel2:#111513;--line:#27302b;
+  --text:#e7e4dc;--muted:#8b958e;--gold:#b79a63;--blue:#75a9c8;
+  --green:#78ad88;--red:#b97870;--violet:#927eae;
+}
+*{box-sizing:border-box}
+html,body{margin:0;width:100%;height:100%;overflow:hidden;background:var(--bg);color:var(--text);font-family:Inter,ui-sans-serif,system-ui,-apple-system,Segoe UI,sans-serif}
+button,input{font:inherit}
+button{background:#151a18;border:1px solid #303934;color:#ddd8ce;border-radius:6px;padding:8px 10px;cursor:pointer}
+button:hover{border-color:#70664e;background:#1a201d}
+button.active{border-color:var(--gold);color:#f0dfba}
+#app{display:grid;grid-template-columns:285px 1fr 310px;grid-template-rows:62px 1fr;height:100vh}
+header{grid-column:1/-1;border-bottom:1px solid var(--line);display:flex;align-items:center;padding:0 18px;gap:22px;background:#090b0a}
+.brand{font-family:Georgia,serif;letter-spacing:.08em;font-size:18px}
+.sub{font-size:11px;color:var(--muted);letter-spacing:.12em;text-transform:uppercase}
+.status{margin-left:auto;display:flex;gap:16px;align-items:center;font-size:11px;color:var(--muted)}
+.dot{width:7px;height:7px;border-radius:50%;display:inline-block;background:var(--green);box-shadow:0 0 10px var(--green)}
+aside{background:var(--panel);overflow:auto}
+#left{border-right:1px solid var(--line);padding:14px;scrollbar-width:thin;contain:content}#right{contain:content}#main{contain:layout paint}
+#right{border-left:1px solid var(--line);padding:14px}
+section{border-bottom:1px solid #202723;padding:0 0 14px;margin:0 0 14px}
+h3{font-size:10px;letter-spacing:.14em;text-transform:uppercase;color:#a7afa9;font-weight:600;margin:2px 0 10px}
+.row{display:flex;gap:6px;align-items:center;margin:6px 0}
+.row>*:first-child{flex:1}
+.small{font-size:10px;color:var(--muted)}
+.value{color:#ddd6c8;font-variant-numeric:tabular-nums}
+.range{width:100%;accent-color:var(--gold)}
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:6px}
+.grid3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:5px}
+.pill{font-size:10px;padding:6px 5px;text-align:center}
+#main{position:relative;min-width:0;min-height:0;background:#050706}
+#world{position:absolute;inset:0;width:100%;height:100%;display:block}
+#overlay{position:absolute;left:14px;top:14px;pointer-events:none}
+.metricStrip{display:flex;gap:7px;flex-wrap:wrap}
+.metric{background:rgba(8,10,9,.82);border:1px solid #232b27;padding:7px 9px;min-width:83px}
+.metric b{display:block;font-size:13px;font-weight:500}
+.metric span{font-size:9px;color:var(--muted);text-transform:uppercase;letter-spacing:.08em}
+#bottom{position:absolute;left:14px;right:14px;bottom:12px;background:rgba(8,10,9,.9);border:1px solid #29312d;display:flex;align-items:center;gap:10px;padding:8px}
+#timeline{flex:1;height:46px}
+.legend{display:flex;gap:10px;flex-wrap:wrap;font-size:9px;color:var(--muted)}
+.sw{width:7px;height:7px;display:inline-block;border-radius:50%;margin-right:3px}
+.log{font-size:10px;color:#b5b9b5;line-height:1.45;max-height:170px;overflow:auto}
+.event{padding:5px 0;border-bottom:1px solid #1b211e}
+.event strong{color:#d9d0bc;font-weight:500}
+select{width:100%;background:#111512;border:1px solid #303934;color:#ddd;border-radius:5px;padding:7px}
+input[type=number]{width:100%;background:#111512;border:1px solid #303934;color:#ddd;border-radius:5px;padding:7px}
+.statbar{height:4px;background:#202722;margin-top:4px;border-radius:3px;overflow:hidden}
+.statbar i{display:block;height:100%;background:var(--gold)}
+#inspector{font-size:10px;line-height:1.6}
+.kv{display:flex;justify-content:space-between;border-bottom:1px solid #1c221f;padding:2px 0}.kv span:first-child{color:var(--muted)}
+#experiment{position:absolute;inset:0;background:rgba(4,5,4,.92);z-index:10;display:none;padding:40px}
+#experiment.show{display:block}
+.expbox{max-width:1100px;margin:auto;border:1px solid #39423c;background:#0b0e0c;padding:22px}
+.exphead{display:flex;justify-content:space-between;align-items:center}
+.expworlds{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-top:15px}
+.worldcard{height:250px;border:1px solid #29312d;position:relative;overflow:hidden}.worldcard canvas{width:100%;height:100%}
+.expstats{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-top:12px}
+.expstat{background:#111512;border:1px solid #242b27;padding:9px}.expstat b{font-size:16px}.expstat span{display:block;color:var(--muted);font-size:9px}
+#tooltip{position:absolute;display:none;pointer-events:none;background:#0a0d0b;border:1px solid #414a43;padding:8px;font-size:10px;line-height:1.45;z-index:8;min-width:160px}
+@media(max-width:1100px){#app{grid-template-columns:230px 1fr 250px}.status .optional{display:none}}
+</style>
+</head>
+<body>
+<div id="app">
+<header>
+  <div class="brand">THE HUMAN LAYER</div>
+  <div class="sub">Empirically Calibrated World Model</div>
+  <div class="status"><span><i class="dot"></i> WORLD ACTIVE</span><span id="clock">YEAR 0.0</span><span class="optional">SEED <b id="seedText">—</b></span></div>
+</header>
+
+<aside id="left">
+<section>
+<h3>Simulation</h3>
+<div class="grid3">
+<button id="pause">PAUSE</button><button id="step">STEP</button><button id="reset">RESET</button>
+</div>
+<div class="row"><span class="small">Speed</span><span class="value" id="speedVal">1×</span></div>
+<input id="speed" class="range" type="range" min="0" max="100" value="0">
+<div class="grid2" style="margin-top:6px">
+<button data-speed="0">1×</button><button data-speed="25">10×</button>
+<button data-speed="50">100×</button><button data-speed="75">1000×</button>
+</div>
+<div class="row"><span class="small">Population</span><span class="value" id="popVal">360</span></div>
+<input id="pop" class="range" type="range" min="80" max="700" value="360">
+</section>
+
+<section>
+<h3>World Controls</h3>
+<div class="row"><span class="small">Scarcity</span><span class="value" id="scarVal">50%</span></div>
+<input id="scar" class="range" type="range" min="0" max="100" value="50">
+<div class="row"><span class="small">Information noise</span><span class="value" id="noiseVal">20%</span></div>
+<input id="noise" class="range" type="range" min="0" max="100" value="20">
+<div class="row"><span class="small">Mobility</span><span class="value" id="mobVal">50%</span></div>
+<input id="mob" class="range" type="range" min="0" max="100" value="50">
+<div class="row"><span class="small">Resource regeneration</span><span class="value" id="regenVal">50%</span></div>
+<input id="regen" class="range" type="range" min="0" max="100" value="50">
+<div class="row"><span class="small">Environmental stability</span><span class="value" id="stabilityVal">80%</span></div>
+<input id="stability" class="range" type="range" min="0" max="100" value="80">
+<div class="row"><span class="small">Disaster frequency</span><span class="value" id="disasterVal">10%</span></div>
+<input id="disaster" class="range" type="range" min="0" max="100" value="10">
+</section>
+
+<section>
+<h3>Psychology</h3>
+<div class="row"><span class="small">Trust</span><span class="value" id="trustVal">50%</span></div>
+<input id="trust" class="range" type="range" min="0" max="100" value="50">
+<div class="row"><span class="small">Conformity</span><span class="value" id="conformVal">50%</span></div>
+<input id="conform" class="range" type="range" min="0" max="100" value="50">
+<div class="row"><span class="small">Risk tolerance</span><span class="value" id="riskVal">50%</span></div>
+<input id="risk" class="range" type="range" min="0" max="100" value="50">
+<div class="row"><span class="small">Ambition</span><span class="value" id="ambitionVal">50%</span></div>
+<input id="ambition" class="range" type="range" min="0" max="100" value="50">
+<div class="row"><span class="small">Curiosity</span><span class="value" id="curiosityVal">50%</span></div>
+<input id="curiosity" class="range" type="range" min="0" max="100" value="50">
+<div class="row"><span class="small">Patience</span><span class="value" id="patienceVal">50%</span></div>
+<input id="patience" class="range" type="range" min="0" max="100" value="50">
+<div class="row"><span class="small">Memory strength</span><span class="value" id="memoryStrengthVal">70%</span></div>
+<input id="memoryStrength" class="range" type="range" min="0" max="100" value="70">
+</section>
+
+<section>
+<h3>Economy</h3>
+<div class="row"><span class="small">Production efficiency</span><span class="value" id="productionVal">50%</span></div>
+<input id="production" class="range" type="range" min="0" max="100" value="50">
+<div class="row"><span class="small">Trade friction</span><span class="value" id="tradeVal">20%</span></div>
+<input id="trade" class="range" type="range" min="0" max="100" value="20">
+<div class="row"><span class="small">Price sensitivity</span><span class="value" id="priceVal">50%</span></div>
+<input id="price" class="range" type="range" min="0" max="100" value="50">
+<div class="row"><span class="small">Specialization</span><span class="value" id="specialVal">50%</span></div>
+<input id="special" class="range" type="range" min="0" max="100" value="50">
+</section>
+
+<section>
+<h3>Social Structure</h3>
+<div class="row"><span class="small">Social influence</span><button id="social" class="active pill">ON</button></div>
+<div class="row"><span class="small">Cooperation</span><span class="value" id="coopVal">60%</span></div>
+<input id="coop" class="range" type="range" min="0" max="100" value="60">
+<div class="row"><span class="small">Competition</span><button id="competition" class="active pill">ON</button></div>
+<div class="row"><span class="small">Group formation</span><span class="value" id="groupVal">50%</span></div>
+<input id="group" class="range" type="range" min="0" max="100" value="50">
+<div class="row"><span class="small">Institution formation</span><span class="value" id="institutionVal">50%</span></div>
+<input id="institution" class="range" type="range" min="0" max="100" value="50">
+<div class="row"><span class="small">Fragmentation</span><span class="value" id="fragmentVal">20%</span></div>
+<input id="fragmentation" class="range" type="range" min="0" max="100" value="20">
+<div class="row"><span class="small">Memory</span><button id="memory" class="active pill">ON</button></div>
+<div class="row"><span class="small">Individual differences</span><button id="individual" class="active pill">ON</button></div>
+</section>
+
+<section>
+<h3>Presets</h3>
+<div class="grid2">
+<button data-preset="balanced">BALANCED</button>
+<button data-preset="highTrust">HIGH TRUST</button>
+<button data-preset="competition">COMPETITIVE</button>
+<button data-preset="scarcity">SCARCITY CRISIS</button>
+<button data-preset="identical">IDENTICAL PEOPLE</button>
+<button data-preset="noSocial">NO SOCIAL INFLUENCE</button>
+</div>
+</section>
+
+<section>
+<h3>Analytical Layer</h3>
+<select id="layer">
+<option value="world">World</option><option value="population">Population density</option>
+<option value="wealth">Wealth</option><option value="influence">Influence</option>
+<option value="belief">Beliefs</option><option value="network">Social network</option>
+<option value="trade">Trade flows</option><option value="institutions">Institutions</option>
+</select>
+<div class="legend" style="margin-top:9px">
+<span><i class="sw" style="background:#78ad88"></i>cooperate</span>
+<span><i class="sw" style="background:#b97870"></i>compete</span>
+<span><i class="sw" style="background:#b79a63"></i>trade</span>
+<span><i class="sw" style="background:#927eae"></i>explore</span>
+</div>
+</section>
+
+<section>
+<h3>Interventions</h3>
+<div class="grid2">
+<button id="resourceShock">RESOURCE SHOCK</button>
+<button id="resourceBoom">RESOURCE BOOM</button>
+<button id="migration">MASS MIGRATION</button>
+<button id="infoShock">INFO SHOCK</button>
+<button id="fragment">FRAGMENT SOCIETY</button>
+<button id="event">RANDOM EVENT</button>
+<button id="fertilityShock">FERTILITY SHOCK</button>
+<button id="infrastructure">BUILD ROUTE</button>
+</div>
+<div class="small" style="margin-top:7px">Canvas tools</div>
+<div class="grid3" style="margin-top:5px">
+<button class="tool active" data-tool="inspect">INSPECT</button>
+<button class="tool" data-tool="resource">RESOURCE</button>
+<button class="tool" data-tool="attract">ATTRACT</button>
+</div>
+<div class="small" style="margin-top:6px">Click or drag across the world to apply the selected tool.</div>
+</section>
+
+<section>
+<h3>Model Status</h3>
+<div class="small">Real-world reference data: demographic, urbanization, inequality and labour-market priors. Behavioural and institutional dynamics remain explicit model assumptions.</div>
+</section>
+
+<section>
+<h3>Causal Experiments</h3>
+<button id="experimentBtn" style="width:100%">COMPARE TWO WORLDS</button>
+<div class="small" style="margin-top:7px">Same starting conditions. Different rules or history.</div>
+</section>
+</aside>
+
+<main id="main">
+<canvas id="world"></canvas>
+<div id="overlay">
+<div class="metricStrip">
+<div class="metric"><b id="mPop">—</b><span>population</span></div>
+<div class="metric"><b id="mWealth">—</b><span>mean wealth</span></div>
+<div class="metric"><b id="mIneq">—</b><span>inequality</span></div>
+<div class="metric"><b id="mTrust">—</b><span>trust</span></div>
+<div class="metric"><b id="mCoop">—</b><span>cooperation</span></div>
+<div class="metric"><b id="mPrice">—</b><span>price index</span></div>
+</div>
+</div>
+<div id="bottom">
+<div class="small" style="width:95px"><b id="simYear">0.0</b><br>SIMULATION YEARS</div>
+<canvas id="timeline"></canvas>
+<div class="small" style="width:120px;text-align:right"><b id="ticks">0</b><br>LOGICAL TICKS</div>
+</div>
+<div id="tooltip"></div>
+
+<div id="experiment">
+<div class="expbox">
+<div class="exphead"><div><div class="brand">CAUSAL LABORATORY</div><div class="sub" style="margin-top:4px">Identical worlds · divergent rules</div></div><button id="closeExp">CLOSE</button></div>
+<div class="row" style="margin-top:15px"><select id="expRule">
+<option value="normal">Normal society</option>
+<option value="noPsych">Psychology removed</option>
+<option value="noSocial">Social influence removed</option>
+<option value="noScarcity">Scarcity removed</option>
+<option value="noMemory">Memory removed</option>
+<option value="noCompetition">Competition removed</option>
+<option value="identical">Identical personalities</option>
+</select><button id="runExp">RUN EXPERIMENT</button></div>
+<div class="expworlds">
+<div class="worldcard"><canvas id="expA"></canvas></div><div class="worldcard"><canvas id="expB"></canvas></div>
+</div>
+<div class="expstats">
+<div class="expstat"><b id="ea">—</b><span>WORLD A · wealth</span></div>
+<div class="expstat"><b id="eb">—</b><span>WORLD B · wealth</span></div>
+<div class="expstat"><b id="ec">—</b><span>wealth divergence</span></div>
+<div class="expstat"><b id="ed">—</b><span>structural divergence</span></div>
+</div>
+<div class="log" id="expLog" style="margin-top:12px">Press RUN EXPERIMENT to evolve both worlds from the same initial state.</div>
+</div>
+</div>
+</main>
+
+<aside id="right">
+<section>
+<h3>World State</h3>
+<div id="worldStats"></div>
+</section>
+<section>
+<h3>Empirical Calibration</h3>
+<div id="calibrationStats"></div>
+<div class="small" style="margin-top:7px">UN WPP 2024 · World Bank WDI/PIP · ILOSTAT. Regional priors are deliberately compressed for browser-scale modelling.</div>
+</section>
+<section>
+<h3>Regional Structure</h3>
+<div id="regionalStats"></div>
+</section>
+<section>
+<h3>Emergent Institutions</h3>
+<div id="institutions"></div>
+</section>
+<section>
+<h3>Selected Agent</h3>
+<div id="inspector"><span class="small">Click an individual.</span></div>
+</section>
+<section>
+<h3>Event History</h3>
+<div class="log" id="log"></div>
+</section>
+</aside>
+</div>
+
+<script>
+"use strict";
+const C=document.getElementById("world"),ctx=C.getContext("2d");
+const T=document.getElementById("timeline"),tctx=T.getContext("2d");
+const $=id=>document.getElementById(id);
+let W=900,H=600,DPR=1,paused=false,stepOnce=false,simTime=0,tick=0,last=performance.now(),acc=0;
+let speed=1,seed=Math.floor(Math.random()*1e9),selected=null,layer="world",events=[],history=[];
+
+const CALIBRATION = {
+  year: 2025,
+  sources: [
+    "UN World Population Prospects 2024",
+    "World Bank World Development Indicators",
+    "World Bank Poverty and Inequality Platform",
+    "ILOSTAT / ILO modelled estimates"
+  ],
+  note: "Regional priors are compact model inputs derived from broad empirical patterns. They are not a substitute for country-level microdata."
+};
+
+const REGIONS = [
+  {name:"North America", short:"N.A.", share:.048, urban:.83, gini:.40, gdp:6.2, fertility:.018, life:.78, labor:.62, service:.78, industry:.19, farm:.03, x:.20,y:.20},
+  {name:"Latin America", short:"L.A.", share:.080, urban:.82, gini:.45, gdp:2.7, fertility:.021, life:.73, labor:.60, service:.66, industry:.24, farm:.10, x:.28,y:.55},
+  {name:"Europe", short:"EUR", share:.090, urban:.75, gini:.30, gdp:4.6, fertility:.012, life:.79, labor:.58, service:.73, industry:.24, farm:.03, x:.49,y:.25},
+  {name:"Sub-Saharan Africa", short:"SSA", share:.145, urban:.45, gini:.42, gdp:.75, fertility:.038, life:.57, labor:.56, service:.48, industry:.19, farm:.33, x:.49,y:.67},
+  {name:"North Africa & Middle East", short:"MENA", share:.075, urban:.66, gini:.34, gdp:2.6, fertility:.025, life:.69, labor:.51, service:.57, industry:.31, farm:.12, x:.57,y:.47},
+  {name:"South Asia", short:"S.A.", share:.255, urban:.37, gini:.33, gdp:1.35, fertility:.021, life:.66, labor:.54, service:.48, industry:.24, farm:.28, x:.68,y:.54},
+  {name:"East Asia", short:"E.A.", share:.205, urban:.68, gini:.36, gdp:3.1, fertility:.010, life:.76, labor:.61, service:.56, industry:.35, farm:.09, x:.77,y:.38},
+  {name:"Southeast Asia", short:"SEA", share:.085, urban:.53, gini:.38, gdp:1.8, fertility:.019, life:.70, labor:.63, service:.51, industry:.29, farm:.20, x:.79,y:.59},
+  {name:"Central Asia", short:"C.A.", share:.028, urban:.53, gini:.32, gdp:1.8, fertility:.021, life:.68, labor:.59, service:.51, industry:.34, farm:.15, x:.66,y:.27},
+  {name:"Oceania", short:"OCE", share:.004, urban:.70, gini:.34, gdp:5.2, fertility:.017, life:.77, labor:.61, service:.75, industry:.20, farm:.05, x:.88,y:.76},
+  {name:"Global Commons", short:"SEA", share:.085, urban:.20, gini:.38, gdp:1.0, fertility:.024, life:.64, labor:.58, service:.42, industry:.24, farm:.34, x:.38,y:.38},
+  {name:"Polar / Remote", short:"REM", share:.000, urban:.10, gini:.30, gdp:.9, fertility:.012, life:.65, labor:.45, service:.30, industry:.20, farm:.50, x:.90,y:.15}
+];
+
+function weightedRegion(){
+  let q=rand(),s=0;
+  for(const r of REGIONS){s+=r.share;if(q<=s)return r}
+  return REGIONS[5];
+}
+function regionAtPoint(x,y){
+  let best=REGIONS[0],bd=1e9;
+  for(const r of REGIONS){
+    const dx=x/W-r.x,dy=y/H-r.y,d=dx*dx+dy*dy;
+    if(d<bd){bd=d;best=r}
+  }
+  return best;
+}
+
+const state={
+  population:360,scarcity:.5,noise:.2,mobility:.5,social:true,memory:true,individual:true,competition:true,
+  regen:.5,stability:.8,disaster:.1,trustBias:.5,conformityBias:.5,riskBias:.5,ambitionBias:.5,
+  curiosityBias:.5,patienceBias:.5,memoryStrength:.7,production:.5,tradeFriction:.2,priceSensitivity:.5,
+  specialization:.5,cooperation:.6,groupFormation:.5,institutionFormation:.5,fragmentation:.2
+};
+let tool="inspect",painting=false;
+let agents=[],resources=[],towns=[],roads=[],institutions=[],flows=[],pulses=[],districts=[];
+const CELL=72, grid=new Map(), neighborCache=new Map();
+let cacheStamp=-1, uiClock=0, renderFrame=0;
+
+function rnd(){seed=(seed*1664525+1013904223)>>>0;return seed/4294967296}
+function rand(a=0,b=1){return a+(b-a)*rnd()}
+function gauss(){let u=0,v=0;while(!u)u=rnd();while(!v)v=rnd();return Math.sqrt(-2*Math.log(u))*Math.cos(2*Math.PI*v)}
+function clamp(x,a=0,b=1){return Math.max(a,Math.min(b,x))}
+function dist(a,b){return Math.hypot(a.x-b.x,a.y-b.y)}
+function resize(){
+  const r=C.getBoundingClientRect();W=Math.max(500,r.width);H=Math.max(400,r.height);DPR=devicePixelRatio||1;
+  C.width=W*DPR;C.height=H*DPR;ctx.setTransform(DPR,0,0,DPR,0,0);
+  T.width=T.clientWidth*DPR;T.height=T.clientHeight*DPR;tctx.setTransform(DPR,0,0,DPR,0,0);
+  makeMap();
+}
+window.addEventListener("resize",resize);
+
+function makeMap(){
+  districts=[];roads=[];towns=[];
+  const cols=4,rows=3;
+  for(let y=0;y<rows;y++)for(let x=0;x<cols;x++){
+    const rr=REGIONS[(y*cols+x)%REGIONS.length];
+    districts.push({x:x*W/cols,y:y*H/rows,w:W/cols,h:H/rows,id:y*cols+x,
+      fertility:clamp(.25+rr.farm*.9),industry:rr.industry,culture:1-rr.gini,region:rr});
+  }
+  for(let i=0;i<12;i++){
+    let d=districts[i], x=d.x+d.w*.5+rand(-d.w*.16,d.w*.16), y=d.y+d.h*.5+rand(-d.h*.16,d.h*.16);
+    towns.push({x,y,pop:rand(20,55),wealth:rand(60,140),age:0,name:["Aster","Brink","Cedar","Dawn","Eden","Fallow","Grove","Haven","Iris","Juno","Kestrel","Lumen"][i]});
+  }
+  for(let i=0;i<towns.length;i++)for(let j=i+1;j<towns.length;j++){
+    if(dist(towns[i],towns[j])<Math.min(W,H)*.42)roads.push([towns[i],towns[j]]);
+  }
+}
+function districtAt(x,y){return districts[Math.max(0,Math.min(11,Math.floor(y/(H/3))*4+Math.floor(x/(W/4))))]}
+function makeResources(){
+  resources=[];
+  for(let i=0;i<24;i++){
+    const d=districts[i%12], x=d.x+rand(30,d.w-30), y=d.y+rand(30,d.h-30);
+    resources.push({x,y,r:rand(18,48),amount:rand(.4,1)*(1+d.fertility*.35),regen:rand(.00003,.0001)*(1+d.fertility),kind:i%3});
+  }
+}
+function createAgent(i,clone){
+  if(clone) return JSON.parse(JSON.stringify(clone));
+  const reg=weightedRegion(), variance=state.individual?1:.03;
+  const n=()=>clamp(.5+gauss()*.16*variance);
+  const age=Math.max(1,Math.min(88,Math.pow(rand(),1.18)*76+5));
+  const urban=rand()<reg.urban;
+  const wealth=Math.max(8,reg.gdp*rand(.55,1.55)*(1+(1-reg.gini)*.18));
+  const jobRoll=rand();
+  const job=jobRoll<reg.farm?"farmer":jobRoll<reg.farm+reg.industry?"maker":jobRoll<reg.farm+reg.industry+.12?"builder":"merchant";
+  const cx=reg.x*W,cy=reg.y*H;
+  return {id:i,region:reg.name,regionShort:reg.short,urban,x:cx+gauss()*(urban?W*.045:W*.08),y:cy+gauss()*(urban?H*.045:H*.08),vx:0,vy:0,
+    age,wealth,food:rand(.45,.95),energy:rand(.45,.95),health:clamp(reg.life+gauss()*.10),
+    trust:clamp(n()*.55+reg.urban*.12),risk:n(),curiosity:n(),patience:n(),ambition:n(),conformity:n(),mobility:clamp(n()*.7+state.mobility*.3),
+    belief:n(),reputation:.5,skill:clamp(n()*.65+.2),memory:[],friends:[],group:i%5,
+    job,action:"REST",cool:rand(0,1),lastReward:0,production:0,consumption:0,interactions:0,age2:rand(0,1),
+    fertility:reg.fertility,lifeBase:reg.life,labor:reg.labor,service:reg.service,industry:reg.industry,farm:reg.farm,
+    biasTrust:state.trustBias,biasConformity:state.conformityBias,biasRisk:state.riskBias,
+    biasAmbition:state.ambitionBias,biasCuriosity:state.curiosityBias,biasPatience:state.patienceBias};
+}
+function reset(){
+  seed=Math.floor(Math.random()*1e9);agents=[];makeMap();makeResources();institutions=[];flows=[];pulses=[];events=[];history=[];
+  simTime=0;tick=0;selected=null;
+  for(let i=0;i<state.population;i++)agents.push(createAgent(i));
+  addEvent("World initialized","Independent agents enter an empty institutional landscape.");
+  updateUI();
+}
+function addEvent(title,detail){
+  events.unshift({time:simTime,title,detail});if(events.length>32)events.pop();
+  $("log").innerHTML=events.map(e=>`<div class="event"><strong>${e.title}</strong><br><span>${e.detail}</span></div>`).join("");
+}
+function rebuildGrid(){
+  grid.clear();
+  for(const a of agents){
+    const gx=(a.x/CELL)|0, gy=(a.y/CELL)|0, k=gx+"|"+gy;
+    let bucket=grid.get(k); if(!bucket) grid.set(k,bucket=[]);
+    bucket.push(a);
+  }
+  cacheStamp=tick; neighborCache.clear();
+}
+function neighbours(a,r=65){
+  const key=a.id+"|"+r;
+  if(cacheStamp===tick && neighborCache.has(key)) return neighborCache.get(key);
+  const out=[], rr=Math.ceil(r/CELL), gx=(a.x/CELL)|0, gy=(a.y/CELL)|0, r2=r*r;
+  for(let ix=gx-rr;ix<=gx+rr;ix++) for(let iy=gy-rr;iy<=gy+rr;iy++){
+    const bucket=grid.get(ix+"|"+iy); if(!bucket) continue;
+    for(const b of bucket) if(b!==a){
+      const dx=a.x-b.x,dy=a.y-b.y;
+      if(dx*dx+dy*dy<r2) out.push(b);
+    }
+  }
+  neighborCache.set(key,out); return out;
+}
+function nearestTown(a){
+  let best=towns[0],bd=1e9;for(const t of towns){let q=Math.hypot(a.x-t.x,a.y-t.y);if(q<bd){bd=q;best=t}}return best;
+}
+function nearestResource(a){
+  let best=null,score=-1;
+  if(speed<1000 || (renderFrame&1)===0){
+    ctx.font="10px system-ui";ctx.fillStyle="rgba(220,216,202,.18)";
+    for(const r of REGIONS){if(r.share<=0)continue;ctx.fillText(r.short,r.x*W-12,r.y*H)}
+  }
+  for(const r of resources){
+    const dx=a.x-r.x,dy=a.y-r.y,d2=dx*dx+dy*dy;
+    const s=r.amount/(Math.sqrt(d2)+20);
+    if(s>score){score=s;best=r}
+  }
+  return best;
+}
+function localBelief(a,ns){
+  if(!state.social||!ns.length)return a.belief;
+  let s=0;for(const b of ns)s+=b.belief*(.4+.6*b.reputation);
+  return clamp(a.belief*(1-a.conformity*.12)+(s/ns.length)*a.conformity*.12);
+}
+function decide(a){
+  const ns=neighbours(a,72), r=nearestResource(a), town=nearestTown(a);
+  if(state.social)a.belief=clamp(localBelief(a,ns)+gauss()*state.noise*.025*(1-state.memoryStrength*.35));
+  const scarcity=1-state.scarcity*(1-(r?.amount||0));
+  const insecurity=1-(a.food*.45+a.energy*.3+a.health*.25);
+  const opportunity=(r?.amount||0)*a.skill;
+  let scores={
+    PRODUCE:.35+a.skill*.6+opportunity*.25,
+    TRADE:.25+a.ambition*.55+(ns.length*.01),
+    COOPERATE:state.social?.2+a.trust*.65+(ns.filter(x=>x.group===a.group).length*.03):0,
+    COMPETE:state.competition?.15+a.ambition*.6+a.risk*.25:0,
+    EXPLORE:.1+a.curiosity*.55+a.mobility*.2,
+    REST:.1+a.patience*.3+insecurity*.5
+  };
+  if(a.food<.25)scores.PRODUCE+=.7;
+  if(a.wealth<30)scores.TRADE+=.5;
+  if(insecurity>.7)scores.REST+=.3;
+  let best=Object.keys(scores).sort((x,y)=>scores[y]-scores[x])[0];a.action=best;
+  a.cool=rand(.2,1);
+}
+function move(a,tx,ty,force=.002){
+  let dx=tx-a.x,dy=ty-a.y,d=Math.hypot(dx,dy)||1;
+  a.vx+=dx/d*force;a.vy+=dy/d*force;
+  const max=.55+.8*state.mobility;
+  const v=Math.hypot(a.vx,a.vy);if(v>max){a.vx*=max/v;a.vy*=max/v}
+  a.x+=a.vx;a.y+=a.vy;a.vx*=.88;a.vy*=.88;
+  if(a.x<3){a.x=3;a.vx*=-.5}if(a.x>W-3){a.x=W-3;a.vx*=-.5}
+  if(a.y<3){a.y=3;a.vy*=-.5}if(a.y>H-3){a.y=H-3;a.vy*=-.5}
+}
+function produce(a){
+  let r=nearestResource(a);if(!r)return;
+  move(a,r.x,r.y,.004);
+  if(Math.hypot(a.x-r.x,a.y-r.y)<18){
+    let q=Math.min((.0025+.0045*state.production)*a.skill+.001,r.amount);r.amount-=q;a.production+=q;
+    a.wealth+=q*48;a.food+=q*.8;a.energy-=.0012;a.lastReward=q;
+  }
+}
+function trade(a,ns){
+  if(!ns.length)return;
+  let b=ns[Math.floor(rand()*ns.length)];
+  if(a.wealth>b.wealth && b.food<a.food*.7 && rand()>state.tradeFriction){
+    a.wealth-=.4;b.wealth+=.4;b.food+=.012;a.food-=.004;
+    a.reputation=clamp(a.reputation+.002);b.reputation=clamp(b.reputation+.006);
+    if(flows.length<180) flows.push({a:a,b:b,v:.7,life:1});
+  }else if(b.wealth>a.wealth && a.food<b.food*.7){
+    b.wealth-=.4;a.wealth+=.4;a.food+=.012;b.food-=.004;
+    if(flows.length<180) flows.push({a:b,b:a,v:.7,life:1});
+  }
+  a.interactions++;b.interactions++;
+}
+function cooperate(a,ns){
+  if(!ns.length)return;
+  let b=ns.filter(x=>x.group===a.group)[0]||ns[0];
+  a.energy-=.002;b.energy-=.001;a.wealth+=.06;b.wealth+=.06;
+  a.reputation=clamp(a.reputation+.004);b.reputation=clamp(b.reputation+.004);
+  a.trust=clamp(a.trust+.002);b.trust=clamp(b.trust+.002);
+  a.interactions++;b.interactions++;
+}
+function compete(a,ns){
+  if(!ns.length)return;
+  let b=ns.reduce((x,y)=>y.wealth>x.wealth?y:x,ns[0]);
+  if(a.ambition>b.ambition){
+    let q=Math.max(0,.12*(a.skill-b.skill)+.03);b.wealth=Math.max(0,b.wealth-q);a.wealth+=q;
+  }
+  a.reputation=clamp(a.reputation-.002);a.interactions++;
+}
+function explore(a){
+  let t=towns[Math.floor(rand()*towns.length)];
+  const reg=REGIONS.find(r=>r.name===a.region)||REGIONS[5];
+  const targetX=t.x*.65+reg.x*W*.35,targetY=t.y*.65+reg.y*H*.35;
+  move(a,targetX+rand(-20,20),targetY+rand(-20,20),.0025);
+  if(Math.hypot(a.x-t.x,a.y-t.y)<22)a.group=(a.group+((rand()>.5)?1:4))%5;
+}
+function institutionTick(){
+  const byTown=towns.map(t=>agents.filter(a=>Math.hypot(a.x-t.x,a.y-t.y)<70));
+  for(let i=0;i<towns.length;i++){
+    let pop=byTown[i].length,t=towns[i];
+    t.pop+=(pop-t.pop)*.002;t.wealth+=(byTown[i].reduce((s,a)=>s+a.wealth,0)/(pop||1)-t.wealth)*.004;t.age+=.01;
+    if(pop>(34-20*state.institutionFormation)&&!institutions.some(x=>x.town===i)){
+      const kind=t.wealth>110?"MARKET":(pop>38?"COOPERATIVE":"COUNCIL");
+      institutions.push({town:i,kind,strength:.3+pop/100,age:0});
+      addEvent(kind+" emerged",`${t.name} crossed the threshold for collective organization.`);
+    }
+  }
+  for(const ins of institutions){
+    ins.age+=.01;ins.strength=clamp(ins.strength+.0001*agents.length/360);
+    let near=byTown[ins.town];for(const a of near){a.trust=clamp(a.trust+.0005*ins.strength);a.wealth+=.001*ins.strength}
+  }
+}
+function tickSim(dt=1){
+  tick++;simTime+=dt/240;
+  if((tick&3)===0 || cacheStamp<0) rebuildGrid();
+  const target=state.population;
+  while(agents.length<target)agents.push(createAgent(agents.length));
+  while(agents.length>target)agents.pop();
+  for(const r of resources)r.amount=clamp(r.amount+r.regen*dt*(.15+.85*state.regen)*(1-state.scarcity*.65));
+  for(const a of agents){
+    a.age+=dt/24000;a.food-=.00035*dt;a.energy-=.00025*dt;
+    a.health=clamp(a.health+(a.food>.55?.00012:-.00018)*dt);
+    a.wealth=Math.max(0,a.wealth-.00005*dt);
+    a.cool-=dt/30;
+    if(a.cool<=0 && (speed<1000 || (tick&3)===0)){decide(a);a.cool=rand(.4,1.8)}
+    const ns=neighbours(a,68);
+    if(state.fragmentation>0 && rand()<state.fragmentation*.0008*dt)a.group=Math.floor(rand()*Math.max(2,Math.floor(2+state.groupFormation*5)));
+    if(a.action==="PRODUCE")produce(a);
+    else if(a.action==="TRADE"){let t=nearestTown(a);move(a,t.x,t.y,.0028);if(ns.length&&rand()<.2)trade(a,ns)}
+    else if(a.action==="COOPERATE"){cooperate(a,ns)}
+    else if(a.action==="COMPETE"){compete(a,ns)}
+    else if(a.action==="EXPLORE")explore(a);
+    else {a.energy+=.0004*dt}
+    if(a.food<.08){a.health-=.0008*dt;a.wealth=Math.max(0,a.wealth-.01*dt)}
+    if(state.memory&&a.memory.length>Math.max(4,Math.floor(8+state.memoryStrength*32)))a.memory.shift();
+    if(state.memory&&a.action!=="REST")a.memory.push({a:a.action,r:a.lastReward});
+  }
+  if(tick%18===0)institutionTick();
+  if(tick%90===0 && rand()<state.disaster){
+    const r=resources[(rand()*resources.length)|0]; r.amount*=.08; pulses.push({x:r.x,y:r.y,r:7,life:1});
+    addEvent("Environmental disruption","A local productive region suffered a sudden disturbance.");
+  }
+  if(tick%35===0)birthDeath();
+  if(tick%25===0)sampleHistory();
+}
+function birthDeath(){
+  let deaths=[];
+  for(const a of agents){
+    const mortality=Math.max(.00002,(a.age>70?(a.age-65)*.00003:0)+(1-a.health)*.00012);
+    if(a.health<.12||a.age>92||rand()<mortality*35)deaths.push(a);
+  }
+  for(const a of deaths){let i=agents.indexOf(a);if(i>=0)agents.splice(i,1)}
+  while(agents.length<state.population){
+    let p=agents[Math.floor(rand()*agents.length)],n=createAgent(agents.length);
+    n.x=clamp(p.x+gauss()*12,5,W-5);n.y=clamp(p.y+gauss()*12,5,H-5);
+    n.group=p.group;n.region=p.region;n.regionShort=p.regionShort;n.urban=p.urban;n.x=clamp(p.x+gauss()*12,5,W-5);n.y=clamp(p.y+gauss()*12,5,H-5);
+    n.belief=clamp(p.belief+gauss()*.06);n.wealth=Math.max(4,p.wealth*.18);agents.push(n);
+  }
+}
+function sampleHistory(){
+  const wealth=agents.reduce((s,a)=>s+a.wealth,0)/(agents.length||1);
+  history.push({t:simTime,w:wealth,c:cooperation(),i:inequality(),p:priceIndex()});
+  if(history.length>280)history.shift();
+}
+function cooperation(){return clamp(agents.reduce((s,a)=>s+a.trust,0)/(agents.length||1))}
+function inequality(){
+  const x=agents.map(a=>a.wealth).sort((a,b)=>a-b);if(!x.length)return 0;
+  let sum=x.reduce((s,v)=>s+v,0),cum=0;for(let i=0;i<x.length;i++)cum+=(i+1)*x[i];
+  return clamp((2*cum)/(x.length*sum)-((x.length+1)/x.length));
+}
+function priceIndex(){return 1+state.scarcity*.8+Math.sin(simTime*.14)*.08-(agents.length/700)*.12}
+function render(){
+  renderFrame++;
+  ctx.clearRect(0,0,W,H);
+  const ultra=(agents.length>520 || speed>=1000);
+  const savedLayer=layer;
+  if(ultra && layer==="network" && (renderFrame%3)!==0) layer="world";
+  let bg=ctx.createLinearGradient(0,0,W,H);bg.addColorStop(0,"#090d0b");bg.addColorStop(1,"#050706");ctx.fillStyle=bg;ctx.fillRect(0,0,W,H);
+  drawTerrain();drawRoads();drawLayer();drawTowns();drawInstitutions();drawFlows();drawAgents();drawPulses();
+  if(selected)drawSelected();
+  drawChart();
+  layer=savedLayer;
+}
+function drawTerrain(){
+  for(const d of districts){
+    let g=ctx.createRadialGradient(d.x+d.w*.5,d.y+d.h*.5,5,d.x+d.w*.5,d.y+d.h*.5,d.w*.7);
+    g.addColorStop(0,`rgba(90,115,91,${.035+d.fertility*.045})`);g.addColorStop(1,"rgba(0,0,0,0)");
+    ctx.fillStyle=g;ctx.fillRect(d.x,d.y,d.w,d.h);
+    ctx.strokeStyle="rgba(90,105,96,.08)";ctx.strokeRect(d.x+.5,d.y+.5,d.w-1,d.h-1);
+  }
+  ctx.strokeStyle="rgba(130,150,135,.05)";ctx.lineWidth=1;
+  for(let x=0;x<W;x+=34){ctx.beginPath();ctx.moveTo(x,0);ctx.lineTo(x,H);ctx.stroke()}
+  for(let y=0;y<H;y+=34){ctx.beginPath();ctx.moveTo(0,y);ctx.lineTo(W,y);ctx.stroke()}
+  for(const r of resources){
+    let rr=r.r*(.75+r.amount*.5),g=ctx.createRadialGradient(r.x,r.y,0,r.x,r.y,rr);
+    g.addColorStop(0,`rgba(183,154,99,${.08+r.amount*.09})`);g.addColorStop(1,"rgba(183,154,99,0)");
+    ctx.fillStyle=g;ctx.beginPath();ctx.arc(r.x,r.y,rr,0,Math.PI*2);ctx.fill();
+    ctx.strokeStyle=`rgba(183,154,99,${.1+r.amount*.2})`;ctx.beginPath();ctx.arc(r.x,r.y,4+r.amount*5,0,Math.PI*2);ctx.stroke();
+  }
+}
+function drawRoads(){
+  ctx.lineWidth=2;ctx.strokeStyle="rgba(180,173,145,.08)";
+  for(const [a,b] of roads){ctx.beginPath();ctx.moveTo(a.x,a.y);ctx.lineTo(b.x,b.y);ctx.stroke()}
+}
+function drawLayer(){
+  if(layer==="population"||layer==="wealth"||layer==="influence"||layer==="belief"){
+    const step=42, cells=new Map();
+    for(const a of agents){
+      const gx=(a.x/step)|0,gy=(a.y/step)|0,k=gx+"|"+gy;
+      let q=cells.get(k); if(!q) cells.set(k,q=[0,0]);
+      q[0]++; q[1]+=layer==="wealth"?a.wealth/120:layer==="belief"?a.belief:layer==="influence"?a.reputation:1;
+    }
+    for(const [k,q] of cells){
+      const p=k.split("|"),x=(+p[0]+.5)*step,y=(+p[1]+.5)*step,v=clamp(layer==="population"?q[0]/14:q[1]/q[0]);
+      ctx.fillStyle=layer==="wealth"?`rgba(183,154,99,${v*.18})`:layer==="belief"?`rgba(146,126,174,${v*.15})`:`rgba(120,173,136,${v*.14})`;
+      ctx.beginPath();ctx.arc(x,y,25,0,Math.PI*2);ctx.fill();
+    }
+  }
+  if(layer==="network"){
+    ctx.lineWidth=.5;
+    for(const a of agents){
+      for(const b of neighbours(a,52)) if(a.id<b.id){
+        ctx.strokeStyle=`rgba(117,169,200,${.045+a.trust*.09})`;
+        ctx.beginPath();ctx.moveTo(a.x,a.y);ctx.lineTo(b.x,b.y);ctx.stroke();
+      }
+    }
+  }
+}
+function drawTowns(){
+  for(const t of towns){
+    let r=4+Math.sqrt(t.pop)*.45;
+    ctx.fillStyle="rgba(225,216,192,.08)";ctx.beginPath();ctx.arc(t.x,t.y,r*2.4,0,Math.PI*2);ctx.fill();
+    ctx.fillStyle="#c5bda9";ctx.beginPath();ctx.arc(t.x,t.y,r,0,Math.PI*2);ctx.fill();
+    ctx.font="9px system-ui";ctx.fillStyle="rgba(220,215,200,.42)";ctx.fillText(t.name,t.x+r+4,t.y+3);
+  }
+}
+function drawInstitutions(){
+  for(const ins of institutions){
+    let t=towns[ins.town];ctx.strokeStyle=ins.kind==="MARKET"?"rgba(183,154,99,.75)":ins.kind==="COOPERATIVE"?"rgba(120,173,136,.7)":"rgba(146,126,174,.7)";
+    ctx.lineWidth=1.5;ctx.beginPath();ctx.arc(t.x,t.y,13+ins.strength*7,0,Math.PI*2);ctx.stroke();
+    ctx.fillStyle=ctx.strokeStyle;ctx.fillRect(t.x-2,t.y-2,4,4);
+  }
+}
+function drawFlows(){
+  for(const f of flows){
+    let p=1-f.life;let x=f.a.x+(f.b.x-f.a.x)*p,y=f.a.y+(f.b.y-f.a.y)*p;
+    ctx.strokeStyle=`rgba(183,154,99,${f.life*.35})`;ctx.lineWidth=1;ctx.beginPath();ctx.moveTo(f.a.x,f.a.y);ctx.lineTo(f.b.x,f.b.y);ctx.stroke();
+    ctx.fillStyle=`rgba(230,211,162,${f.life*.8})`;ctx.beginPath();ctx.arc(x,y,2.2,0,Math.PI*2);ctx.fill();f.life-=.035;
+  }
+  flows=flows.filter(x=>x.life>0);
+}
+function drawAgents(){
+  for(const a of agents){
+    let col=a.action==="COOPERATE"?"#78ad88":a.action==="COMPETE"?"#b97870":a.action==="TRADE"?"#b79a63":a.action==="EXPLORE"?"#927eae":"#a9b2ab";
+    let r=1.7+clamp(a.reputation)*1.7;
+    ctx.fillStyle=col;ctx.globalAlpha=.78;ctx.beginPath();ctx.arc(a.x,a.y,r,0,Math.PI*2);ctx.fill();ctx.globalAlpha=1;
+    if(a===selected){ctx.strokeStyle="#eee4cc";ctx.lineWidth=1;ctx.beginPath();ctx.arc(a.x,a.y,r+5,0,Math.PI*2);ctx.stroke()}
+  }
+}
+function drawSelected(){
+  ctx.strokeStyle="rgba(235,224,196,.25)";ctx.lineWidth=1;ctx.beginPath();ctx.arc(selected.x,selected.y,35,0,Math.PI*2);ctx.stroke();
+  for(const b of neighbours(selected,80)){ctx.strokeStyle="rgba(235,224,196,.14)";ctx.beginPath();ctx.moveTo(selected.x,selected.y);ctx.lineTo(b.x,b.y);ctx.stroke()}
+}
+function drawPulses(){
+  for(const p of pulses){ctx.strokeStyle=`rgba(210,190,145,${p.life*.35})`;ctx.lineWidth=2;ctx.beginPath();ctx.arc(p.x,p.y,p.r,0,Math.PI*2);ctx.stroke();p.r+=2;p.life-=.025}
+  pulses=pulses.filter(p=>p.life>0);
+}
+function drawChart(){
+  if(speed>=1000 && (renderFrame&1)) return;
+  let w=T.clientWidth,h=T.clientHeight;tctx.clearRect(0,0,w,h);if(history.length<2)return;
+  const min=Math.min(...history.map(x=>x.w)),max=Math.max(...history.map(x=>x.w))+1;
+  const line=(key,alpha)=>{
+    tctx.strokeStyle=alpha;tctx.lineWidth=1.4;tctx.beginPath();
+    history.forEach((p,i)=>{let x=i/(history.length-1)*w,y=h-((p[key]-min)/(max-min))*h*.75-4;i?tctx.lineTo(x,y):tctx.moveTo(x,y)});tctx.stroke();
+  };
+  line("w","rgba(183,154,99,.85)");
+}
+function updateUI(){
+  $("seedText").textContent=seed;
+  $("clock").textContent="YEAR "+simTime.toFixed(1);
+  $("simYear").textContent=simTime.toFixed(1);$("ticks").textContent=tick.toLocaleString();
+  $("mPop").textContent=agents.length;$("mWealth").textContent=(agents.reduce((s,a)=>s+a.wealth,0)/(agents.length||1)).toFixed(1);
+  $("mIneq").textContent=inequality().toFixed(2);$("mTrust").textContent=(cooperation()*100).toFixed(0)+"%";
+  $("mCoop").textContent=(agents.filter(a=>a.action==="COOPERATE").length/(agents.length||1)*100).toFixed(0)+"%";
+  $("mPrice").textContent=priceIndex().toFixed(2);
+  $("regenVal").textContent=Math.round(state.regen*100)+"%";
+  $("stabilityVal").textContent=Math.round(state.stability*100)+"%";
+  $("disasterVal").textContent=Math.round(state.disaster*100)+"%";
+  $("worldStats").innerHTML=[
+    ["simulation age",simTime.toFixed(2)+" y"],["logical ticks",tick.toLocaleString()],
+    ["population",agents.length],["towns",towns.length],["institutions",institutions.length],
+    ["network density",networkDensity().toFixed(3)],["mean health",(agents.reduce((s,a)=>s+a.health,0)/(agents.length||1)).toFixed(2)]
+  ].map(x=>`<div class="kv"><span>${x[0]}</span><b>${x[1]}</b></div>`).join("");
+  $("institutions").innerHTML=institutions.length?institutions.slice(-8).reverse().map(i=>`<div class="event"><strong>${i.kind}</strong><br><span>${towns[i.town].name} · strength ${i.strength.toFixed(2)}</span></div>`).join(""):"<span class='small'>None yet. Institutions emerge when local populations cross thresholds.</span>";
+  if(selected)inspect();
+
+  const byReg=new Map();
+  for(const a of agents){
+    let q=byReg.get(a.region);if(!q)byReg.set(a.region,q={n:0,w:0,h:0,u:0});
+    q.n++;q.w+=a.wealth;q.h+=a.health;q.u+=a.urban?1:0;
+  }
+  const ranked=[...byReg.entries()].sort((a,b)=>b[1].n-a[1].n).slice(0,7);
+  $("regionalStats").innerHTML=ranked.map(([name,q])=>{
+    const r=REGIONS.find(x=>x.name===name);
+    return `<div class="event"><strong>${r.short} · ${q.n}</strong><br><span>wealth ${ (q.w/q.n).toFixed(2)} · urban ${Math.round(q.u/q.n*100)}% · life prior ${Math.round(r.life*100)}%</span></div>`;
+  }).join("");
+
+  const observedGini=agents.length?REGIONS.reduce((s,r)=>s+r.gini*r.share,0):0;
+  const modelGini=inequality();
+  const gap=Math.abs(modelGini-observedGini);
+  $("calibrationStats").innerHTML=
+    `<div class="kv"><span>reference year</span><b>${CALIBRATION.year}</b></div>`+
+    `<div class="kv"><span>regional priors</span><b>${REGIONS.length-1}</b></div>`+
+    `<div class="kv"><span>model inequality</span><b>${modelGini.toFixed(3)}</b></div>`+
+    `<div class="kv"><span>reference prior</span><b>${observedGini.toFixed(3)}</b></div>`+
+    `<div class="kv"><span>prior gap</span><b>${gap.toFixed(3)}</b></div>`;
+}
+function networkDensity(){
+  if(!agents.length)return 0;let edges=0,sample=Math.min(agents.length,180);
+  for(let i=0;i<sample;i++)edges+=neighbours(agents[i],52).length;
+  return edges/(sample*Math.max(1,agents.length-1));
+}
+function inspect(){
+  const a=selected;
+  $("inspector").innerHTML=[
+    ["id","#"+a.id],["region",a.regionShort],["urban",a.urban?"yes":"no"],["age",a.age.toFixed(1)],["wealth",a.wealth.toFixed(1)],["food",(a.food*100).toFixed(0)+"%"],
+    ["health",(a.health*100).toFixed(0)+"%"],["skill",(a.skill*100).toFixed(0)+"%"],["trust",(a.trust*100).toFixed(0)+"%"],
+    ["risk",(a.risk*100).toFixed(0)+"%"],["conformity",(a.conformity*100).toFixed(0)+"%"],["belief",(a.belief*100).toFixed(0)+"%"],
+    ["reputation",(a.reputation*100).toFixed(0)+"%"],["group","G"+a.group],["job",a.job],["current action",a.action],["interactions",a.interactions]
+  ].map(x=>`<div class="kv"><span>${x[0]}</span><b>${x[1]}</b></div>`).join("");
+}
+function intervention(type){
+  let x=rand(80,W-80),y=rand(80,H-80);if(pulses.length<24)pulses.push({x,y,r:5,life:1});
+  if(type==="shock"){for(const r of resources)if(Math.hypot(r.x-x,r.y-y)<140)r.amount*=.15;addEvent("Resource shock",`A local resource collapse occurred near the intervention point.`)}
+  if(type==="boom"){for(const r of resources)if(Math.hypot(r.x-x,r.y-y)<170)r.amount=clamp(r.amount+.7);addEvent("Resource boom","A sudden abundance altered local incentives.")}
+  if(type==="migration"){for(const a of agents){a.x=clamp(x+gauss()*70,5,W-5);a.y=clamp(y+gauss()*70,5,H-5)}addEvent("Mass migration","Population relocated around a new opportunity centre.")}
+  if(type==="info"){for(const a of agents)a.belief=clamp(a.belief*.35+rand()*.65);addEvent("Information shock","Beliefs were exposed to a high-noise information environment.")}
+  if(type==="fragment"){for(const a of agents)a.group=Math.floor(rand()*5);for(const a of agents)a.trust*=.55;addEvent("Social fragmentation","Existing networks lost cohesion and group boundaries shifted.")}
+  if(type==="event"){let e=["A new trade route opened.","A local norm spread rapidly.","A settlement became unusually attractive.","A production technique diffused.","A trusted individual became a social bridge."][Math.floor(rand()*5)];addEvent("Emergent event",e)}
+}
+function setSpeed(v){
+  speed=v<=0?1:v<=25?10:v<=50?100:1000;
+  $("speedVal").textContent=speed+"×";
+}
+$("speed").addEventListener("input",e=>setSpeed(+e.target.value));
+document.querySelectorAll("[data-speed]").forEach(b=>b.onclick=()=>{$("speed").value=b.dataset.speed;setSpeed(+b.dataset.speed)});
+$("pause").onclick=()=>{paused=!paused;$("pause").textContent=paused?"PLAY":"PAUSE"};
+$("step").onclick=()=>{stepOnce=true};
+$("reset").onclick=reset;
+$("pop").oninput=e=>{state.population=+e.target.value;$("popVal").textContent=state.population};
+$("scar").oninput=e=>{state.scarcity=+e.target.value/100;$("scarVal").textContent=e.target.value+"%"};
+$("noise").oninput=e=>{state.noise=+e.target.value/100;$("noiseVal").textContent=e.target.value+"%"};
+$("mob").oninput=e=>{state.mobility=+e.target.value/100;$("mobVal").textContent=e.target.value+"%"};
+["social","memory","individual","competition"].forEach(k=>$(k).onclick=()=>{state[k]=!state[k];$(k).textContent=state[k]?"ON":"OFF";$(k).classList.toggle("active",state[k])});
+$("layer").onchange=e=>layer=e.target.value;
+
+const sliderBindings=[
+  ["regen","regenVal","regen"],["stability","stabilityVal","stability"],["disaster","disasterVal","disaster"],
+  ["trust","trustVal","trustBias"],["conform","conformVal","conformityBias"],["risk","riskVal","riskBias"],
+  ["ambition","ambitionVal","ambitionBias"],["curiosity","curiosityVal","curiosityBias"],["patience","patienceVal","patienceBias"],
+  ["memoryStrength","memoryStrengthVal","memoryStrength"],["production","productionVal","production"],
+  ["trade","tradeVal","tradeFriction"],["price","priceVal","priceSensitivity"],["special","specialVal","specialization"],
+  ["coop","coopVal","cooperation"],["group","groupVal","groupFormation"],["institution","institutionVal","institutionFormation"],
+  ["fragmentation","fragmentVal","fragmentation"]
+];
+for(const [id,label,key] of sliderBindings){
+  const el=$(id),out=$(label);
+  el.addEventListener("input",()=>{
+    state[key]=+el.value/100;out.textContent=el.value+"%";
+  });
+}
+function applyPreset(name){
+  const set=(id,v)=>{ $(id).value=v; $(id).dispatchEvent(new Event("input")); };
+  if(name==="balanced"){
+    set("scar",50);set("noise",20);set("mob",50);set("regen",50);set("stability",80);set("disaster",10);
+    set("trust",50);set("conform",50);set("risk",50);set("ambition",50);set("curiosity",50);set("patience",50);
+    set("memoryStrength",70);set("production",50);set("trade",20);set("price",50);set("special",50);
+    set("coop",60);set("group",50);set("institution",50);set("fragmentation",20);
+  }else if(name==="highTrust"){
+    set("trust",90);set("conform",65);set("coop",90);set("fragmentation",5);
+  }else if(name==="competition"){
+    set("trust",25);set("risk",80);set("ambition",90);set("coop",10);set("trade",35);set("fragmentation",35);
+  }else if(name==="scarcity"){
+    set("scar",92);set("regen",12);set("disaster",35);set("coop",70);set("mob",75);
+  }else if(name==="identical"){
+    state.individual=false; $("individual").textContent="OFF"; $("individual").classList.remove("active");
+    set("conform",50);set("trust",50);set("risk",50);set("ambition",50);set("curiosity",50);set("patience",50);
+  }else if(name==="noSocial"){
+    state.social=false; $("social").textContent="OFF"; $("social").classList.remove("active");
+    set("conform",0);set("coop",0);set("fragmentation",0);
+  }
+  addEvent("Preset applied",name.replace(/([A-Z])/g," $1"));
+}
+document.querySelectorAll("[data-preset]").forEach(b=>b.onclick=()=>applyPreset(b.dataset.preset));
+document.querySelectorAll(".tool").forEach(b=>b.onclick=()=>{
+  tool=b.dataset.tool;document.querySelectorAll(".tool").forEach(x=>x.classList.toggle("active",x===b));
+});
+$("fertilityShock").onclick=()=>{for(const r of resources)r.amount*=.45;addEvent("Fertility shock","Productive capacity fell across the world.");};
+$("infrastructure").onclick=()=>{
+  if(towns.length>1){const a=towns[(rand()*towns.length)|0],b=towns[(rand()*towns.length)|0];if(a!==b)roads.push([a,b]);addEvent("Infrastructure built","A new connection changed the cost of movement between settlements.");}
+};
+$("resourceShock").onclick=()=>intervention("shock");$("resourceBoom").onclick=()=>intervention("boom");
+$("migration").onclick=()=>intervention("migration");$("infoShock").onclick=()=>intervention("info");
+$("fragment").onclick=()=>intervention("fragment");$("event").onclick=()=>intervention("event");
+function applyTool(x,y){
+  if(tool==="inspect"){
+    let best=null,bd=12;for(const a of agents){let d=Math.hypot(a.x-x,a.y-y);if(d<bd){bd=d;best=a}}
+    selected=best;inspect();return;
+  }
+  if(tool==="resource"){
+    let best=null,bd=1e9;for(const r of resources){let d=Math.hypot(r.x-x,r.y-y);if(d<bd){bd=d;best=r}}
+    if(best)best.amount=clamp(best.amount+.18); else resources.push({x,y,r:28,amount:.8,regen:.00005,kind:0});
+    if(pulses.length<24)pulses.push({x,y,r:4,life:1});return;
+  }
+  if(tool==="attract"){
+    for(const a of agents){let dx=x-a.x,dy=y-a.y,d=Math.hypot(dx,dy);if(d<150&&d>1){a.vx+=dx/d*.08;a.vy+=dy/d*.08}}
+    if(pulses.length<24)pulses.push({x,y,r:4,life:1});
+  }
+}
+C.addEventListener("click",e=>{
+  const r=C.getBoundingClientRect(),x=e.clientX-r.left,y=e.clientY-r.top;
+  applyTool(x,y);
+});
+C.addEventListener("pointerdown",e=>{if(tool!=="inspect"){painting=true;C.setPointerCapture?.(e.pointerId);const r=C.getBoundingClientRect();applyTool(e.clientX-r.left,e.clientY-r.top)}});
+C.addEventListener("pointermove",e=>{
+  if(!painting)return;const r=C.getBoundingClientRect();applyTool(e.clientX-r.left,e.clientY-r.top);
+});
+C.addEventListener("pointerup",()=>painting=false);
+C.addEventListener("mousemove",e=>{
+  const r=C.getBoundingClientRect(),x=e.clientX-r.left,y=e.clientY-r.top;let best=null,bd=15;
+  for(const a of agents){let d=Math.hypot(a.x-x,a.y-y);if(d<bd){bd=d;best=a}}
+  const tt=$("tooltip");if(best){tt.style.display="block";tt.style.left=(x+14)+"px";tt.style.top=(y+14)+"px";tt.innerHTML=`<b>Agent #${best.id}</b><br>${best.action} · ${best.job}<br>wealth ${best.wealth.toFixed(1)} · belief ${(best.belief*100).toFixed(0)}%`}else tt.style.display="none";
+});
+function cloneWorld(){
+  return {agents:JSON.parse(JSON.stringify(agents)),resources:JSON.parse(JSON.stringify(resources)),towns:JSON.parse(JSON.stringify(towns)),institutions:JSON.parse(JSON.stringify(institutions))};
+}
+function evolveWorld(w,rule,steps=520){
+  let A=w.agents,R=w.resources;
+  const sampleN=Math.min(A.length,180);
+  const sample=A.slice(0,sampleN);
+  for(let s=0;s<steps;s++){
+    for(const r of R)r.amount=clamp(r.amount+r.regen*(rule==="noScarcity"?4:1));
+    for(const a of sample){
+      let bestR=R[0],bestS=-1;
+      for(const r of R){const dx=a.x-r.x,dy=a.y-r.y;const sc=r.amount/(Math.sqrt(dx*dx+dy*dy)+20);if(sc>bestS){bestS=sc;bestR=r}}
+      if(a.food<.35||bestR.amount>(rule==="noScarcity"?.25:.55)){
+        a.x+=(bestR.x-a.x)*.009;a.y+=(bestR.y-a.y)*.009;a.wealth+=a.skill*.018;
+      }else{
+        const j=(a.id*17+s*13)%sample.length,b=sample[j];
+        if(b!==a && rule!=="noCompetition" && a.ambition>b.ambition)a.wealth+=.014;
+      }
+      if(rule==="noSocial")a.belief=.5+(a.belief-.5)*.985;
+      else if(rule==="noPsych")a.belief=.5;
+      else if(rule!=="identical")a.belief=clamp(a.belief*.985+(sample[(a.id+7)%sample.length]?.belief||.5)*.015);
+      else {a.skill=.65;a.trust=.5;a.risk=.5;a.ambition=.5;a.conformity=.5}
+      if(rule==="noMemory")a.belief=.5+(a.belief-.5)*.82;
+      a.food-=.0007;a.wealth=Math.max(0,a.wealth-.0002);
+    }
+  }
+  let wealth=sample.reduce((s,a)=>s+a.wealth,0)/sample.length;
+  let x=sample.map(a=>a.wealth).sort((a,b)=>a-b),sum=x.reduce((s,v)=>s+v,0)||1,cum=x.reduce((s,v,i)=>s+(i+1)*v,0);
+  return {wealth,ineq:(2*cum/(x.length*sum)-(x.length+1)/x.length),agents:sample,resources:R};
+}
+function drawMini(canvas,data){
+  const c=canvas.getContext("2d"),w=canvas.width=canvas.clientWidth*devicePixelRatio,h=canvas.height=canvas.clientHeight*devicePixelRatio;c.setTransform(devicePixelRatio,0,0,devicePixelRatio,0,0);
+  c.fillStyle="#080b09";c.fillRect(0,0,w/devicePixelRatio,h/devicePixelRatio);
+  const cw=w/devicePixelRatio,ch=h/devicePixelRatio,sx=cw/W,sy=ch/H;
+  for(const r of data.resources||resources){c.fillStyle="rgba(183,154,99,.12)";c.beginPath();c.arc(r.x*sx,r.y*sy,7,0,Math.PI*2);c.fill()}
+  for(const a of data.agents){c.fillStyle=a.belief>.58?"#927eae":a.belief<.42?"#78ad88":"#a9b2ab";c.fillRect(a.x*sx,a.y*sy,1.6,1.6)}
+}
+async function runExperiment(){
+  const rule=$("expRule").value,base=cloneWorld();
+  const A=evolveWorld(JSON.parse(JSON.stringify(base)),"normal",900);
+  const B=evolveWorld(JSON.parse(JSON.stringify(base)),rule,900);
+  drawMini($("expA"),A);drawMini($("expB"),B);
+  $("ea").textContent=A.wealth.toFixed(1);$("eb").textContent=B.wealth.toFixed(1);
+  $("ec").textContent=Math.abs(A.wealth-B.wealth).toFixed(1);
+  $("ed").textContent=Math.abs(A.ineq-B.ineq).toFixed(3);
+  $("expLog").innerHTML=`World A and World B began from the same snapshot. The second world used <b>${rule}</b>. Their trajectories were allowed to diverge through repeated local decisions. This is a controlled counterfactual, not a prediction of real societies. The world state begins from empirical regional priors, while behavioural rules remain model assumptions.`;
+}
+$("experimentBtn").onclick=()=>{$("experiment").classList.add("show");runExperiment()};
+$("closeExp").onclick=()=>$("experiment").classList.remove("show");
+$("runExp").onclick=runExperiment;
+window.addEventListener("keydown",e=>{
+  if(e.target.matches("input,select,textarea,button")) return;
+  if(e.code==="Space"){paused=!paused;$("pause").textContent=paused?"PLAY":"PAUSE";e.preventDefault()}
+  if(e.key==="1"){$("speed").value=0;setSpeed(0)}
+  if(e.key==="2"){$("speed").value=25;setSpeed(25)}
+  if(e.key==="3"){$("speed").value=50;setSpeed(50)}
+  if(e.key==="4"){$("speed").value=75;setSpeed(75)}
+  if(e.key.toLowerCase()==="r")reset();
+});
+
+function loop(now){
+  let real=Math.min(.05,(now-last)/1000);last=now;
+  if(!paused||stepOnce){
+    let mult=speed===1000?18:speed===100?8:speed===10?2:1;
+    let ticks=stepOnce?1:Math.ceil(mult);
+    for(let i=0;i<ticks;i++)tickSim(speed===1000?4:1);
+    stepOnce=false;
+  }
+  render();
+  if(now-uiClock>(speed>=1000?700:250)){uiClock=now;updateUI();}
+  requestAnimationFrame(loop);
+}
+resize();reset();requestAnimationFrame(loop);
+</script>
+</body>
+</html>
