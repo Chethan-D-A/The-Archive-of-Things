@@ -1,0 +1,5 @@
+{
+  "title": "Snake",
+  "description": "A minimalist, high-speed Snake game with grid-based movement, multiple difficulty levels, and three control perspectives including an adaptive Meta POV that interprets rapid player input.",
+  "type": "interactive"
+}
