@@ -1,0 +1,1016 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Sketching it out — Snake</title>
+<style>
+  :root{
+    --bg:#000;
+    --text:#b8b8b8;
+    --grid:#151515;
+    --snake:#e8e8e8;
+    --food:#fff;
+  }
+  *{box-sizing:border-box}
+  html,body{
+    width:100%;height:100%;margin:0;overflow:hidden;
+    background:var(--bg);
+    font-family:Inter,ui-sans-serif,system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;
+    -webkit-font-smoothing:antialiased;
+    text-rendering:geometricPrecision;
+  }
+  body{display:grid;place-items:center}
+  #wrap{
+    position:relative;
+    width:min(100vw,1500px);
+    height:930px;
+    min-height:930px;
+    background:#000;
+    overflow:hidden;
+  }
+  canvas{
+    position:absolute;
+    left:50%;
+    top:0;
+    width:820px;
+    height:820px;
+    transform:translateX(-50%);
+    display:block;
+    image-rendering:auto;
+    touch-action:none;
+    filter:contrast(1.015);
+  }
+
+  .scorebox{
+    position:absolute;
+    top:28px;
+    color:#292929;
+    font-size:8px;
+    letter-spacing:.20em;
+    text-transform:uppercase;
+    pointer-events:none;
+    font-variant-numeric:tabular-nums;
+    z-index:2;
+    transition:color .25s ease;
+  }
+  .scorebox strong{
+    display:block;
+    margin-top:8px;
+    color:#e1e1e1;
+    font-size:118px;
+    line-height:.78;
+    font-weight:300;
+    letter-spacing:-.085em;
+    font-variant-numeric:tabular-nums;
+  }
+  .scorebox.score-pulse strong{
+    animation:scorePulse .32s cubic-bezier(.2,.8,.2,1);
+  }
+  @keyframes scorePulse{
+    0%{transform:scale(1)}
+    45%{transform:scale(1.045)}
+    100%{transform:scale(1)}
+  }
+  #previous-score{left:52px}
+  #current-score{right:52px}
+
+  #hud{
+    position:absolute;
+    inset:0;
+    width:100%;
+    height:820px;
+    pointer-events:none;
+    user-select:none;
+  }
+
+  .hud-group{
+    position:absolute;
+    top:50%;
+    transform:translateY(-50%);
+    display:flex;
+    align-items:center;
+    justify-content:center;
+  }
+
+  .hud-group[aria-label="Arrow controls"]{
+    flex-direction:column;
+    gap:22px;
+  }
+
+  .hud-caption{
+    display:none;
+  }
+
+  .hud-group[aria-label="Arrow controls"]{
+    left:74px;
+  }
+
+  .hud-group[aria-label="Difficulty"]{
+    right:74px;
+  }
+
+  .keypad{
+    display:grid;
+    grid-template-columns:50px 50px 50px;
+    grid-template-rows:50px 50px;
+    gap:12px;
+    touch-action:manipulation;
+    pointer-events:auto;
+  }
+
+  .key{
+    width:50px;
+    height:50px;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    border:1px solid #181818;
+    border-radius:6px;
+    color:#4d4d4d;
+    background:linear-gradient(180deg,#070707,#030303);
+    font-size:14px;
+    line-height:1;
+    box-shadow:inset 0 1px 0 rgba(255,255,255,.025);
+    transition:
+      background .08s ease,
+      border-color .08s ease,
+      color .08s ease,
+      transform .08s ease,
+      box-shadow .08s ease;
+    touch-action:manipulation;
+    -webkit-tap-highlight-color:transparent;
+    user-select:none;
+    cursor:pointer;
+  }
+
+  .key.up{grid-column:2;grid-row:1}
+  .key.left{grid-column:1;grid-row:2}
+  .key.down{grid-column:2;grid-row:2}
+  .key.right{grid-column:3;grid-row:2}
+
+  .key.up{border-radius:5px 5px 0 0}
+  .key.left{border-radius:5px 0 0 5px}
+  .key.right{border-radius:0 5px 5px 0}
+  .key.down{border-radius:0 0 5px 5px}
+
+  .key.active{
+    background:#e9e9e9;
+    border-color:#e9e9e9;
+    color:#111;
+    transform:translateY(1px);
+    box-shadow:0 1px 0 rgba(255,255,255,.08);
+  }
+
+  .pov-stack{
+    display:flex;
+    flex-direction:column;
+    align-items:center;
+    gap:7px;
+    pointer-events:auto;
+  }
+
+  .pov-label{
+    color:#292929;
+    font-size:8px;
+    line-height:1;
+    letter-spacing:.16em;
+    text-transform:uppercase;
+    user-select:none;
+  }
+
+  .pov-selector{
+    display:flex;
+    align-items:center;
+    gap:2px;
+    padding:3px;
+    border:1px solid #141414;
+    border-radius:8px;
+    background:#030303;
+    box-shadow:
+      inset 0 1px 0 rgba(255,255,255,.022),
+      0 0 0 1px rgba(0,0,0,.45);
+  }
+
+  .pov-selector button{
+    appearance:none;
+    position:relative;
+    border:0;
+    background:transparent;
+    color:#414141;
+    height:34px;
+    min-width:76px;
+    padding:0 12px;
+    border-radius:5px;
+    font:inherit;
+    font-size:11px;
+    letter-spacing:.012em;
+    cursor:pointer;
+    -webkit-tap-highlight-color:transparent;
+    transition:
+      color .24s cubic-bezier(.22,1,.36,1),
+      background-color .24s cubic-bezier(.22,1,.36,1),
+      box-shadow .24s cubic-bezier(.22,1,.36,1);
+  }
+
+  .pov-selector button:nth-child(3){
+    min-width:76px;
+  }
+
+  .pov-selector button:hover{
+    color:#777;
+    background:rgba(255,255,255,.018);
+  }
+
+  .pov-selector button.selected{
+    color:#d7d7d7;
+    background:#0d0d0d;
+    box-shadow:
+      inset 0 1px 0 rgba(255,255,255,.055),
+      inset 0 -1px 0 rgba(0,0,0,.55),
+      0 0 0 1px #1b1b1b;
+  }
+
+  .pov-selector button.selected::after{
+    content:"";
+    position:absolute;
+    left:25%;
+    right:25%;
+    bottom:5px;
+    height:1px;
+    background:#777;
+    opacity:.55;
+    transform:scaleX(.55);
+    transition:transform .24s cubic-bezier(.22,1,.36,1),opacity .24s ease;
+  }
+
+  .difficulty{
+    position:relative;
+    display:flex;
+    flex-direction:column;
+    align-items:stretch;
+    gap:2px;
+    padding:3px;
+    border:1px solid #141414;
+    border-radius:8px;
+    background:#030303;
+    box-shadow:
+      inset 0 1px 0 rgba(255,255,255,.022),
+      0 0 0 1px rgba(0,0,0,.45);
+    pointer-events:auto;
+  }
+
+  .difficulty button{
+    appearance:none;
+    position:relative;
+    z-index:1;
+    width:128px;
+    border:0;
+    background:transparent;
+    color:#414141;
+    height:34px;
+    padding:0 13px;
+    border-radius:5px;
+    font:inherit;
+    font-size:11px;
+    letter-spacing:.012em;
+    text-align:left;
+    cursor:pointer;
+    transition:
+      color .24s cubic-bezier(.22,1,.36,1),
+      background-color .24s cubic-bezier(.22,1,.36,1),
+      box-shadow .24s cubic-bezier(.22,1,.36,1);
+  }
+
+  .difficulty button:hover{
+    color:#777;
+    background:rgba(255,255,255,.018);
+  }
+
+  .difficulty button.selected{
+    color:#d7d7d7;
+    background:#0d0d0d;
+    box-shadow:
+      inset 0 1px 0 rgba(255,255,255,.055),
+      inset 0 -1px 0 rgba(0,0,0,.55),
+      0 0 0 1px #1b1b1b;
+  }
+
+  .difficulty button.selected::after{
+    content:"";
+    position:absolute;
+    left:auto;
+    right:10px;
+    top:50%;
+    bottom:auto;
+    width:1px;
+    height:13px;
+    background:#777;
+    opacity:.55;
+    transform:translateY(-50%) scaleY(.55);
+    transform-origin:center;
+    transition:transform .24s cubic-bezier(.22,1,.36,1), opacity .24s ease;
+  }
+
+  .difficulty button:hover::after{
+    transform:translateY(-50%) scaleY(.8);
+    opacity:.35;
+  }
+
+  .difficulty button:focus-visible{
+    outline:1px solid #555;
+    outline-offset:-1px;
+  }
+
+  @media (max-width:1050px){
+    #previous-score{left:22px}
+    #current-score{right:22px}
+    .scorebox strong{font-size:82px}
+    .hud-group[aria-label="Arrow controls"]{left:14px}
+    .hud-group[aria-label="Difficulty"]{right:28px}
+  }
+
+  @media (max-width:800px){
+    #wrap{width:100%;height:930px}
+    canvas{width:820px;height:820px;left:50%;transform:translateX(-50%)}
+    .scorebox{top:10px}
+    #previous-score{left:12px}
+    #current-score{right:12px}
+    .scorebox strong{font-size:58px}
+    .hud-group[aria-label="Arrow controls"]{left:14px}
+    .hud-group[aria-label="Difficulty"]{right:14px}
+    .difficulty button{width:112px}
+  }
+  @media (prefers-reduced-motion: reduce){
+    .scorebox.score-pulse strong,
+    .key,
+    .difficulty button,
+    .pov-selector button{
+      animation:none !important;
+      transition:none !important;
+    }
+  }
+
+</style>
+</head>
+<body>
+<div id="wrap">
+  <canvas id="game" aria-label="Snake game"></canvas>
+  <div class="scorebox" id="previous-score">Previous<strong id="previous-value">0</strong></div>
+  <div class="scorebox" id="current-score">Score<strong id="score">0</strong></div>
+  <section id="hud" aria-label="Game controls">
+    <div class="hud-group" aria-label="Arrow controls">
+      <span class="hud-caption">Move</span>
+      <div class="keypad" aria-hidden="true">
+        <span class="key up" data-key="ArrowUp">↑</span>
+        <span class="key left" data-key="ArrowLeft">←</span>
+        <span class="key down" data-key="ArrowDown">↓</span>
+        <span class="key right" data-key="ArrowRight">→</span>
+      </div>
+        <div class="pov-stack">
+          <div class="pov-label">View</div>
+          <div class="pov-selector" id="povSelector" aria-label="Snake view">
+            <button type="button" data-pov="you" class="selected" aria-pressed="true">You POV</button>
+            <button type="button" data-pov="snake" aria-pressed="false">Snake POV</button>
+            <button type="button" data-pov="meta" aria-pressed="false">Meta POV</button>
+          </div>
+        </div>
+    </div>
+
+    <div class="hud-group" aria-label="Difficulty">
+      <span class="hud-caption">Difficulty</span>
+      <div class="difficulty" role="group" aria-label="Difficulty">
+        <button type="button" data-difficulty="beginner" class="selected">Beginner</button>
+        <button type="button" data-difficulty="intermediate">Intermediate</button>
+        <button type="button" data-difficulty="hard">Hard</button>
+        <button type="button" data-difficulty="very-hard">Very Hard</button>
+        <button type="button" data-difficulty="mad">Mad</button>
+      </div>
+    </div>
+  </section>
+</div>
+
+<script>
+(() => {
+  "use strict";
+
+  const wrap = document.getElementById("wrap");
+  const canvas = document.getElementById("game");
+  const ctx = canvas.getContext("2d", {alpha:false});
+  const scoreEl = document.getElementById("score");
+  const currentScoreBox = document.getElementById("current-score");
+  const previousEl = document.getElementById("previous-value");
+  const difficultyButtons = [...document.querySelectorAll("[data-difficulty]")];
+  const keyVisuals = [...document.querySelectorAll("[data-key]")];
+  const povButtons = [...document.querySelectorAll("[data-pov]")];
+  let previousScore = 0;
+
+  const DIFFICULTIES = {
+    beginner:     { base: 180, min: 130, ramp: 1.2 },
+    intermediate: { base: 120, min: 82,  ramp: 1.5 },
+    hard:         { base: 75,  min: 48,  ramp: 1.3 },
+    "very-hard":  { base: 48,  min: 32,  ramp: 1.0 },
+    mad:          { base: 28,  min: 16,  ramp: 0.7 }
+  };
+
+  let difficulty = "beginner";
+  let povMode = "you";
+
+  const DESIGN = 820;
+  const GRID = 30;
+  const COLS = 25;
+  const ROWS = 25;
+  const OX = 35;
+  const OY = 35;
+
+  let scale = 1;
+  let snake, dir, nextDir, food, score = 0, alive, paused, last, accumulator;
+  let touchStart = null;
+  let intervalNow = 180;
+
+  function resize(){
+    const rect = canvas.getBoundingClientRect();
+    const dpr = Math.min(window.devicePixelRatio || 1, 2);
+    canvas.width = Math.round(rect.width * dpr);
+    canvas.height = Math.round(rect.height * dpr);
+    scale = Math.min(rect.width / DESIGN, rect.height / DESIGN);
+    ctx.setTransform(dpr * scale,0,0,dpr * scale,0,0);
+    draw();
+  }
+
+  function cellToPx(c,r){
+    return [OX + c*GRID, OY + r*GRID];
+  }
+
+  function reset(){
+    inputQueue.length = 0;
+    if (score > 0) {
+      previousScore = score;
+      previousEl.textContent = previousScore;
+    }
+    snake = [
+      {x:12,y:12},
+      {x:12,y:13},
+      {x:12,y:14},
+      {x:12,y:15}
+    ];
+    dir = {x:0,y:-1};
+    nextDir = {x:0,y:-1};
+    score = 0;
+    alive = true;
+    paused = false;
+    last = performance.now();
+    accumulator = 0;
+    clearTimeout(gameTimer);
+    const level = DIFFICULTIES[difficulty] || DIFFICULTIES.hard;
+    intervalNow = Math.max(level.min, level.base - score * level.ramp);
+    randomFood();
+    scoreEl.textContent = "0";
+    wrap.classList.remove("playing");
+    clearTimeout(gameTimer);
+    gameTimer = 0;
+    logicDeadline = performance.now() + Math.max(LOGIC_STEP, intervalNow);
+    draw();
+    startLogicClock();
+  }
+
+  function randomFood(){
+    const occupied = new Set(snake.map(p => p.x+","+p.y));
+    const free = [];
+    for(let y=0;y<ROWS;y++) for(let x=0;x<COLS;x++){
+      if(!occupied.has(x+","+y)) free.push({x,y});
+    }
+    food = free[(Math.random()*free.length)|0] || {x:8,y:7};
+  }
+
+  function getProjectedHeading(){
+    return inputQueue.length ? inputQueue[inputQueue.length-1] : nextDir;
+  }
+
+  /*
+    META POV — impulse-aware intent resolver.
+
+    Meta does not "switch modes" and it does not blindly enqueue every click.
+    A rapid burst of physical presses is treated as one short-lived intent
+    signal. Repeated taps strengthen an interpretation; conflicting taps are
+    resolved using heading, food, free space and immediate survival.
+
+    The important distinction is:
+      physical input != command history
+      physical input -> inferred intent -> one safe command
+
+    This prevents the classic failure where a user hammers two buttons and
+    the queue fills with mutually incompatible turns.
+  */
+  const metaHistory = [];
+  const META_WINDOW = 300;
+  const META_MAX_HISTORY = 18;
+  let metaBurstFrame = null;
+  let metaBurstUntil = 0;
+  let metaBurstKey = null;
+  let metaBurstAt = 0;
+  let metaLatchedDirection = null;
+
+  function metaKey(x,y){
+    if(x===1) return 'R';
+    if(x===-1) return 'L';
+    if(y===1) return 'D';
+    return 'U';
+  }
+
+  function cardinal(d){
+    if(d.x!==0 && d.y!==0){
+      if(Math.abs(d.x)>=Math.abs(d.y)) return {x:Math.sign(d.x),y:0};
+      return {x:0,y:Math.sign(d.y)};
+    }
+    return {x:Math.sign(d.x),y:Math.sign(d.y)};
+  }
+
+  function sameDir(a,b){ return a.x===b.x && a.y===b.y; }
+
+  function metaRecord(x,y,now){
+    metaHistory.push({x,y,t:now,k:metaKey(x,y)});
+    while(metaHistory.length > META_MAX_HISTORY) metaHistory.shift();
+    while(metaHistory.length && now-metaHistory[0].t > META_WINDOW) metaHistory.shift();
+  }
+
+  function metaInterpretations(screenX, screenY, reference){
+    const fx=reference.x, fy=reference.y;
+    const rx=-fy, ry=fx;
+    return [
+      {frame:0, x:screenX, y:screenY},
+      {frame:1, x:fx*screenY + rx*screenX, y:fy*screenY + ry*screenX}
+    ].map(c => ({frame:c.frame, ...cardinal(c)}));
+  }
+
+  // Meta is deliberately an INPUT interpreter, not an autonomous snake player.
+  // It never uses food direction or a pathfinding score to invent a turn.
+  // A rapid burst is treated as one human gesture. Repetition and consistency
+  // decide which of the two coordinate frames the user is expressing.
+  function metaSafe(candidate, reference){
+    if(!candidate.x && !candidate.y) return false;
+    if(candidate.x===-reference.x && candidate.y===-reference.y) return false;
+
+    const head=snake[0];
+    const nx=(head.x+candidate.x+COLS)%COLS;
+    const ny=(head.y+candidate.y+ROWS)%ROWS;
+    const limit=(nx===food.x && ny===food.y) ? snake.length : snake.length-1;
+    for(let i=0;i<limit;i++){
+      if(snake[i].x===nx && snake[i].y===ny) return false;
+    }
+    return true;
+  }
+
+  function resolveMetaDirection(screenX, screenY){
+    const now=performance.now();
+    const key=metaKey(screenX,screenY);
+    const reference=getProjectedHeading();
+
+    // Meta treats a rapid repetition of the SAME physical button as one
+    // continuous human impulse. Once that impulse has produced a turn, keep
+    // that interpretation locked until the burst changes or expires.
+    const sameBurst = metaBurstKey===key && now-metaBurstAt<=META_WINDOW && metaLatchedDirection;
+    if(sameBurst){
+      return {x:metaLatchedDirection.x,y:metaLatchedDirection.y};
+    }
+
+    const raw=metaInterpretations(screenX,screenY,reference);
+    const candidates=[];
+    for(const c of raw){
+      if(!candidates.some(v=>sameDir(v,c))) candidates.push(c);
+    }
+
+    // Never manufacture a reversal. Also never let a harmless "continue
+    // straight" interpretation win when the same button has a real turn.
+    const nonReverse=candidates.filter(c =>
+      c.x!==0 || c.y!==0
+    ).filter(c => !(c.x===-reference.x && c.y===-reference.y));
+
+    if(!nonReverse.length){
+      return {x:reference.x,y:reference.y};
+    }
+
+    const turning=nonReverse.filter(c => !sameDir(c,reference));
+    let chosen=null;
+
+    // The first priority is a genuine turn. This is what prevents a sideways
+    // snake from ignoring LEFT/RIGHT simply because one frame interprets the
+    // same button as "continue forward".
+    if(turning.length===1){
+      chosen=turning[0];
+    }else if(turning.length>1){
+      // When both coordinate frames produce legitimate turns, retain the
+      // user's established frame for the burst. If none exists, use the
+      // screen frame first; this is deterministic and instantaneous.
+      const preferredFrame=(metaBurstFrame===0 || metaBurstFrame===1) ? metaBurstFrame : 0;
+      chosen=turning.find(c=>c.frame===preferredFrame) || turning[0];
+    }else{
+      // Both interpretations mean "continue". Keep the current heading.
+      chosen=nonReverse[0];
+    }
+
+    // A physically repeated tap must reinforce the first inferred intent,
+    // never make Meta flip between You POV and Snake POV.
+    metaBurstKey=key;
+    metaBurstAt=now;
+    metaLatchedDirection={x:chosen.x,y:chosen.y};
+    metaBurstFrame=chosen.frame;
+    metaRecord(screenX,screenY,now);
+
+    return {x:chosen.x,y:chosen.y};
+  }
+
+  const inputQueue = [];
+  const INPUT_QUEUE_LIMIT = 1;
+
+  function setDirection(x,y){
+    if(x!==0 && y!==0){
+      if(Math.abs(x)>=Math.abs(y)) y=0;
+      else x=0;
+    }
+    if(!alive){ reset(); }
+    if(!x && !y) return;
+
+    const base = inputQueue.length ? inputQueue[inputQueue.length-1] : nextDir;
+    if(x === -base.x && y === -base.y) return;
+    if(x === base.x && y === base.y) return;
+
+    inputQueue.length=0;
+    inputQueue.push({x,y});
+    wrap.classList.add("playing");
+  }
+
+  function setRelativeDirection(localX, localY){
+    // Every physical input is handled synchronously. Meta is an interpreter,
+    // never a mode transition, so a press can never be lost while changing POV.
+    if(povMode === "meta"){
+      setMetaDirection(localX, localY);
+      return;
+    }
+
+    if(povMode === "you"){
+      setDirection(localX, localY);
+      return;
+    }
+
+    const fx = nextDir.x || dir.x;
+    const fy = nextDir.y || dir.y;
+    const rx = -fy;
+    const ry = fx;
+    setDirection(
+      fx * localY + rx * localX,
+      fy * localY + ry * localX
+    );
+  }
+
+  function setMetaDirection(x,y){
+    const choice=resolveMetaDirection(x,y);
+    if(!choice.x && !choice.y) return;
+
+    // Meta replaces the pending intent with the newest inferred intent.
+    // There is deliberately no multi-command queue: a burst is one gesture.
+    const base=nextDir;
+    if(choice.x===-base.x && choice.y===-base.y) return;
+    if(choice.x===base.x && choice.y===base.y) return;
+
+    inputQueue.length=0;
+    inputQueue.push(choice);
+    wrap.classList.add("playing");
+  }
+
+  function keyForDirection(d){
+    if(d.x===1) return "→";
+    if(d.x===-1) return "←";
+    if(d.y===1) return "↓";
+    return "↑";
+  }
+
+
+  function step(){
+    if(!alive || paused) return;
+
+    if(inputQueue.length){
+      nextDir = inputQueue.shift();
+    }
+    dir = nextDir;
+    const head = snake[0];
+
+    // Toroidal board: leaving one edge immediately continues from the opposite edge.
+    const nx = (head.x + dir.x + COLS) % COLS;
+    const ny = (head.y + dir.y + ROWS) % ROWS;
+
+    const eating = nx===food.x && ny===food.y;
+    const limit = eating ? snake.length : snake.length-1;
+
+    for(let i=0;i<limit;i++){
+      if(snake[i].x===nx && snake[i].y===ny){
+        die();
+        return;
+      }
+    }
+
+    snake.unshift({x:nx,y:ny});
+
+    if(eating){
+      score++;
+      scoreEl.textContent = score;
+      currentScoreBox.classList.remove("score-pulse");
+      void currentScoreBox.offsetWidth;
+      currentScoreBox.classList.add("score-pulse");
+      randomFood();
+    }else{
+      snake.pop();
+    }
+  }
+
+  function die(){
+    alive=false;
+    setTimeout(() => {
+      // Keep the dead state visible briefly, then return to the same quiet
+      // initial composition used by the reference.
+      reset();
+    }, 650);
+  }
+
+  function drawDotGrid(){
+    ctx.fillStyle="#000";
+    ctx.fillRect(0,0,DESIGN,DESIGN);
+
+    ctx.fillStyle="#151515";
+    for(let y=0;y<ROWS;y++){
+      const py=OY+y*GRID;
+      for(let x=0;x<COLS;x++){
+        const px=OX+x*GRID;
+        ctx.beginPath();
+        ctx.arc(px,py,1.2,0,Math.PI*2);
+        ctx.fill();
+      }
+    }
+  }
+
+  function drawFood(){
+    const [x,y]=cellToPx(food.x,food.y);
+    ctx.fillStyle="#fff";
+    ctx.beginPath();
+    ctx.arc(x,y,9.4,0,Math.PI*2);
+    ctx.fill();
+  }
+
+  function drawBody(){
+    for(let i=snake.length-1;i>=1;i--){
+      const p=snake[i];
+      const [x,y]=cellToPx(p.x,p.y);
+      const t=(i-1)/Math.max(1,snake.length-1);
+      const radius=8.9 - t*2.2;
+      const opacity=.96 - t*.34;
+
+      ctx.globalAlpha=opacity;
+      ctx.fillStyle="#dedede";
+      ctx.beginPath();
+      ctx.arc(x,y,radius,0,Math.PI*2);
+      ctx.fill();
+      ctx.globalAlpha=1;
+    }
+  }
+
+  function drawHead(){
+    const h=snake[0];
+    const [x,y]=cellToPx(h.x,h.y);
+
+    ctx.fillStyle=alive ? "#fff" : "#d0d0d0";
+    ctx.beginPath();
+    ctx.arc(x,y,11.2,0,Math.PI*2);
+    ctx.fill();
+
+    let fx=dir.x, fy=dir.y;
+    if(fx===0 && fy===0) fy=-1;
+    const px=-fy, py=fx;
+    const eyeForward=3.1, eyeSide=3.3;
+    const ex1=x+fx*eyeForward+px*eyeSide;
+    const ey1=y+fy*eyeForward+py*eyeSide;
+    const ex2=x+fx*eyeForward-px*eyeSide;
+    const ey2=y+fy*eyeForward-py*eyeSide;
+
+    ctx.fillStyle="#111";
+    ctx.beginPath(); ctx.arc(ex1,ey1,1.25,0,Math.PI*2); ctx.fill();
+    ctx.beginPath(); ctx.arc(ex2,ey2,1.25,0,Math.PI*2); ctx.fill();
+  }
+
+  function draw(){
+    drawDotGrid();
+    drawFood();
+    drawBody();
+    drawHead();
+  }
+
+  // Fixed 144 Hz logic clock. Rendering remains on requestAnimationFrame,
+  // but input/game timing never adapts to the display refresh rate.
+  const LOGIC_HZ = 144;
+  const LOGIC_STEP = 1000 / LOGIC_HZ;
+
+  let gameTimer = 0;
+  let logicDeadline = 0;
+
+  function currentInterval(){
+    const level = DIFFICULTIES[difficulty] || DIFFICULTIES.hard;
+    return Math.max(level.min, level.base - score * level.ramp);
+  }
+
+  function startLogicClock(){
+    clearTimeout(gameTimer);
+    logicDeadline = performance.now() + LOGIC_STEP;
+    gameTimer = setTimeout(logicPulse, LOGIC_STEP);
+  }
+
+  function logicPulse(){
+    gameTimer = 0;
+    if(!alive) return;
+
+    const now = performance.now();
+
+    if(paused){
+      logicDeadline = now + LOGIC_STEP;
+      gameTimer = setTimeout(logicPulse, LOGIC_STEP);
+      return;
+    }
+
+    const interval = currentInterval();
+
+    if(now >= logicDeadline){
+      step();
+
+      // Schedule from the actual current time. This avoids accumulating
+      // browser timer drift while never replaying stale movement ticks.
+      logicDeadline = now + Math.max(LOGIC_STEP, interval);
+    }
+
+    gameTimer = setTimeout(logicPulse, LOGIC_STEP);
+  }
+
+  // Input is synchronous. If the next discrete movement is already due when
+  // a key/click arrives, execute it immediately instead of waiting for the
+  // next 144 Hz logic pulse.
+  function wakeIfDue(){
+    if(!alive || paused) return;
+
+    const now = performance.now();
+    if(now >= logicDeadline){
+      clearTimeout(gameTimer);
+      gameTimer = 0;
+      step();
+      logicDeadline = now + Math.max(LOGIC_STEP, currentInterval());
+      gameTimer = setTimeout(logicPulse, LOGIC_STEP);
+    }
+  }
+
+  // Rendering follows the browser/display. The game clock above is fixed 144 Hz.
+  function renderLoop(){
+    draw();
+    requestAnimationFrame(renderLoop);
+  }
+
+  function selectDifficulty(value){
+    if(!DIFFICULTIES[value]) return;
+    difficulty = value;
+    difficultyButtons.forEach(button => {
+      button.classList.toggle("selected", button.dataset.difficulty === value);
+      button.setAttribute("aria-pressed", button.dataset.difficulty === value ? "true" : "false");
+    });
+  }
+
+  difficultyButtons.forEach(button => {
+    button.setAttribute("aria-pressed", button.classList.contains("selected") ? "true" : "false");
+    button.addEventListener("click", () => selectDifficulty(button.dataset.difficulty));
+  });
+
+  povButtons.forEach(button => {
+    button.setAttribute("aria-pressed", button.classList.contains("selected") ? "true" : "false");
+    button.addEventListener("click", () => {
+      povMode = button.dataset.pov;
+      povButtons.forEach(b => {
+        const selected = b.dataset.pov === povMode;
+        b.classList.toggle("selected", selected);
+        b.setAttribute("aria-pressed", selected ? "true" : "false");
+      });
+      draw();
+    });
+  });
+
+  // Optional diagnostics; disabled for publication builds.
+  const DEBUG_INPUT = false;
+  const debugStats = {inputs:0, keyboardInputs:0, pointerInputs:0, metaInputs:0};
+
+  const keyFlashTimers = new WeakMap();
+
+  function flashKey(key){
+    keyVisuals.forEach(el => {
+      const active = el.dataset.key === key;
+
+      if(active){
+        el.classList.add("active");
+        // Inline values guarantee the pressed state wins over any selector
+        // or transition state. The state is committed synchronously.
+        el.style.setProperty("background", "#e9e9e9", "important");
+        el.style.setProperty("border-color", "#e9e9e9", "important");
+        el.style.setProperty("color", "#111", "important");
+        el.style.setProperty("transform", "translateY(1px)", "important");
+
+        const oldTimer = keyFlashTimers.get(el);
+        if(oldTimer) clearTimeout(oldTimer);
+
+        const timer = setTimeout(() => {
+          el.classList.remove("active");
+          el.style.removeProperty("background");
+          el.style.removeProperty("border-color");
+          el.style.removeProperty("color");
+          el.style.removeProperty("transform");
+          keyFlashTimers.delete(el);
+        }, 160);
+
+        keyFlashTimers.set(el, timer);
+      }else{
+        el.classList.remove("active");
+        el.style.removeProperty("background");
+        el.style.removeProperty("border-color");
+        el.style.removeProperty("color");
+        el.style.removeProperty("transform");
+      }
+    });
+  }
+
+  keyVisuals.forEach(el => {
+    el.addEventListener("pointerdown", e => {
+      e.preventDefault();
+      const key = el.dataset.key;
+      const map = {
+        ArrowUp:[0,-1],
+        ArrowDown:[0,1],
+        ArrowLeft:[-1,0],
+        ArrowRight:[1,0]
+      };
+      if (map[key]) {
+        if(DEBUG_INPUT){debugStats.inputs++;debugStats.pointerInputs++;if(povMode==="meta")debugStats.metaInputs++;}
+        setRelativeDirection(...map[key]);
+        wakeIfDue();
+        flashKey(key);
+      }
+    });
+  });
+
+  window.addEventListener("keydown", e=>{
+    const k=e.key.toLowerCase();
+    const map={
+      arrowup:[0,-1],w:[0,-1],
+      arrowdown:[0,1],s:[0,1],
+      arrowleft:[-1,0],a:[-1,0],
+      arrowright:[1,0],d:[1,0]
+    };
+    if(map[k]){
+      e.preventDefault();
+      if(e.repeat) return;
+      if(DEBUG_INPUT){debugStats.inputs++;debugStats.keyboardInputs++;if(povMode==="meta")debugStats.metaInputs++;}
+      setRelativeDirection(...map[k]);
+      wakeIfDue();
+      const visualKey = {
+        arrowup:"ArrowUp", arrowdown:"ArrowDown",
+        arrowleft:"ArrowLeft", arrowright:"ArrowRight"
+      }[k];
+      if(visualKey) flashKey(visualKey);
+    }else if(k===" "){
+      e.preventDefault();
+      const wasPaused=paused;
+      paused=!paused;
+      if(wasPaused && !paused){
+        scheduleGameStep(0);
+      }
+    }else if(k==="r"){
+      reset();
+    }
+  },{passive:false});
+
+  canvas.addEventListener("pointerdown", e=>{
+    touchStart={x:e.clientX,y:e.clientY};
+    canvas.setPointerCapture?.(e.pointerId);
+  });
+
+  canvas.addEventListener("pointerup", e=>{
+    if(!touchStart) return;
+    const dx=e.clientX-touchStart.x, dy=e.clientY-touchStart.y;
+    touchStart=null;
+    if(Math.max(Math.abs(dx),Math.abs(dy))<12) return;
+    if(Math.abs(dx)>Math.abs(dy)) setDirection(dx>0?1:-1,0);
+    else setDirection(0,dy>0?1:-1);
+  });
+
+  canvas.addEventListener("pointercancel", ()=>{ touchStart=null; });
+  canvas.addEventListener("lostpointercapture", ()=>{ touchStart=null; });
+
+  window.addEventListener("resize", resize);
+
+  reset();
+  resize();
+  renderLoop();
+})();
+</script>
+</body>
+</html>
