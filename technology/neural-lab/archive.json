@@ -1,0 +1,5 @@
+{
+  "title": "Neural Environment",
+  "description": "An offline language-model laboratory where you provide text, train a neural network to predict the next token, inspect its learned parameters and probabilities, and generate text directly from the trained model.",
+  "type": "interactive"
+}
