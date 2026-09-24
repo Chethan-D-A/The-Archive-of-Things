@@ -1,0 +1,776 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Neural Environment — Local Language Model Lab</title>
+<style>
+:root{
+ --bg:#080b0f;--panel:#0e141b;--panel2:#0b1016;--line:#202b35;--line2:#2d3b47;
+ --text:#edf3f8;--muted:#8795a3;--accent:#6dbbff;--green:#70d6a4;--red:#ef8383;--gold:#e4c46d;
+}
+*{box-sizing:border-box}
+html,body{margin:0;min-height:100%;background:var(--bg);color:var(--text);font-family:Inter,system-ui,-apple-system,Segoe UI,Roboto,Arial,sans-serif}
+body{font-size:13px}
+button,input,select,textarea{font:inherit}
+button{cursor:pointer}
+.app{min-height:100vh}
+.top{height:60px;display:flex;align-items:center;gap:24px;padding:0 20px;border-bottom:1px solid var(--line);background:#090d12;position:sticky;top:0;z-index:30}
+.brand{font-size:13px;font-weight:800;letter-spacing:.1em;white-space:nowrap}.brand small{display:block;color:var(--muted);font-size:8px;letter-spacing:.12em;margin-top:3px}
+.nav{display:flex;gap:3px;height:100%;align-items:center}.nav button{border:1px solid transparent;background:transparent;color:var(--muted);padding:8px 12px;border-radius:6px}.nav button.active{background:#141f29;border-color:var(--line2);color:var(--text)}
+.main{width:min(1500px,100%);margin:auto;padding:16px}.view{display:none}.view.active{display:block}
+.grid{display:grid;grid-template-columns:minmax(0,1fr) 350px;gap:12px}.card{background:var(--panel);border:1px solid var(--line);border-radius:9px;overflow:hidden}
+.head{min-height:47px;padding:0 13px;border-bottom:1px solid var(--line);display:flex;align-items:center;justify-content:space-between;gap:10px}.head h2{font-size:12px;letter-spacing:.06em;text-transform:uppercase;margin:0}
+.body{padding:13px}.row{display:flex;gap:7px;align-items:center;flex-wrap:wrap}.section{margin-top:11px}
+.field{display:flex;flex-direction:column;gap:5px;min-width:0}.field label{font-size:9px;color:var(--muted);font-weight:700;letter-spacing:.1em;text-transform:uppercase}
+input,select,textarea{background:#090e13;color:var(--text);border:1px solid var(--line2);border-radius:6px;padding:8px 9px;outline:none}input:focus,select:focus,textarea:focus{border-color:#4a7899}
+textarea{width:100%;resize:vertical;min-height:150px}
+.btn{border:1px solid var(--line2);background:#111820;color:var(--text);border-radius:6px;padding:8px 10px}.btn:hover{background:#17212a}.btn.primary{background:#142c40;border-color:#386a8d}.btn.good{background:#10251d;border-color:#37785d}.btn.danger{background:#291718;border-color:#704042}.btn.small{font-size:11px;padding:6px 8px}
+.muted{color:var(--muted)}.notice{padding:9px 10px;background:#0a1016;border:1px solid var(--line);border-radius:6px;color:#abb7c2;line-height:1.55;font-size:11px}
+.stats{display:grid;grid-template-columns:repeat(6,1fr);gap:6px}.stat{background:var(--panel2);border:1px solid var(--line);border-radius:6px;padding:8px}.stat span{display:block;color:var(--muted);font-size:8px;text-transform:uppercase;letter-spacing:.08em}.stat b{display:block;margin-top:4px;font-size:13px}
+.progress{height:5px;background:#070a0e;border:1px solid var(--line);border-radius:5px;overflow:hidden}.progress>i{display:block;height:100%;width:0;background:var(--accent)}
+canvas{display:block;width:100%;height:190px;background:#080d12}.log{background:#080c10;border:1px solid var(--line);border-radius:6px;padding:9px;font:10px/1.55 ui-monospace,SFMono-Regular,Consolas,monospace;white-space:pre-wrap;overflow:auto;max-height:260px;color:#afbdc9}
+.chat{height:calc(100vh - 94px);max-width:1000px;margin:auto;display:grid;grid-template-rows:47px 1fr auto}.messages{padding:18px;overflow:auto}.msg{max-width:82%;padding:10px 12px;border:1px solid var(--line);border-radius:8px;margin-bottom:10px;white-space:pre-wrap;line-height:1.55}.msg.user{margin-left:auto;background:#142334;border-color:#2a4e6b}.msg.model{background:#0d1319}.msg.system{max-width:100%;background:#0b1015;color:var(--muted);font-size:11px}
+.composer{display:flex;gap:7px;padding:10px;border-top:1px solid var(--line);background:#0b1015}.composer input{flex:1}
+.helpgrid{display:grid;grid-template-columns:210px minmax(0,900px);min-height:760px}.helpnav{padding:8px;background:#0b1015;border-right:1px solid var(--line)}.helpnav button{display:block;width:100%;text-align:left;background:none;border:0;color:var(--muted);padding:9px;border-radius:6px;font-size:11px}.helpnav button.active{background:#15212b;color:var(--text)}.helpcontent{padding:28px 32px}.helpcontent h1{font-size:24px;margin:0 0 10px}.helpcontent h2{font-size:15px;margin:27px 0 7px}.helpcontent p,.helpcontent li{font-size:13px;line-height:1.7;color:#c4ced7}.helpcontent code{background:#080c10;border:1px solid var(--line);padding:2px 5px;border-radius:4px}
+.tablewrap{max-height:260px;overflow:auto;border:1px solid var(--line);border-radius:6px}table{width:100%;border-collapse:collapse;font-size:10px}th,td{padding:5px 7px;border-bottom:1px solid #18212a;text-align:right}th{position:sticky;top:0;background:#111820;color:var(--muted);text-transform:uppercase;font-size:8px}
+.tokenbox{max-height:240px;overflow:auto;display:flex;flex-wrap:wrap;gap:4px}.tok{border:1px solid var(--line);border-radius:4px;padding:4px 6px;background:#0a1015;font:10px ui-monospace,monospace}.tok b{color:var(--accent)}
+.tabs{display:flex;gap:4px;flex-wrap:wrap}.tab{border:1px solid var(--line);background:#0b1117;color:var(--muted);border-radius:5px;padding:6px 8px;font-size:10px}.tab.active{background:#15212b;color:var(--text);border-color:#3d617b}
+.warn{color:var(--gold)}.goodtxt{color:var(--green)}.badtxt{color:var(--red)}
+@media(max-width:1100px){.grid{grid-template-columns:1fr}.stats{grid-template-columns:repeat(3,1fr)}}
+@media(max-width:700px){.top{height:auto;min-height:60px;flex-wrap:wrap;padding:10px}.helpgrid{grid-template-columns:1fr}.helpnav{border-right:0;border-bottom:1px solid var(--line);display:flex;overflow:auto}.helpnav button{min-width:max-content}.stats{grid-template-columns:repeat(2,1fr)}}
+</style>
+</head>
+<body>
+<div class="app">
+<header class="top">
+ <div class="brand">NEURAL ENVIRONMENT<small>LOCAL LANGUAGE MODEL LAB · OFFLINE</small></div>
+ <nav class="nav">
+  <button class="active" data-view="lab">Model Lab</button>
+  <button data-view="chat">Neural Chat · Live Model</button>
+  <button data-view="data">Dataset</button>
+  <button data-view="help">Tutorial</button>
+ </nav>
+</header>
+
+<main class="main">
+
+<section id="view-lab" class="view active">
+ <div class="grid">
+  <div>
+   <div class="card">
+    <div class="head"><h2>Model</h2><span id="modelStatus" class="muted">untrained</span></div>
+    <div class="body">
+     <div class="row">
+      <div class="field"><label>Model size</label><select id="modelPreset">
+       <option value="tiny">Tiny · ~1K</option>
+       <option value="small" selected>Small · ~10K</option>
+       <option value="medium">Medium · ~100K</option>
+       <option value="large">Large · ~500K</option>
+       <option value="huge">Huge · ~1M+</option>
+       <option value="custom">Experimental · Custom</option>
+      </select></div>
+      <div class="field"><label>Execution</label><select id="backend"><option value="cpu">CPU · JavaScript</option></select></div>
+      <div class="field"><label>Context length</label><input id="contextLen" type="number" min="8" max="512" value="64"></div>
+      <div class="field"><label>Learning rate</label><input id="learningRate" type="number" value=".003" step=".0001"></div>
+      <div class="field"><label>Batch size</label><input id="batchSize" type="number" min="1" max="64" value="4"></div>
+     </div>
+     <div id="customModel" class="row section" style="display:none">
+      <div class="field"><label>Embedding dimension</label><input id="customEmb" type="number" min="4" max="256" value="32"></div>
+      <div class="field"><label>Hidden dimension</label><input id="customHidden" type="number" min="8" max="1024" value="64"></div>
+      <div class="field"><label>Sequence layers</label><input id="customLayers" type="number" min="1" max="4" value="1"></div>
+     </div>
+     <div id="sizeWarning" class="notice section">Choose a model size. Actual parameter count depends on the vocabulary learned from your dataset.</div>
+     <div class="row section">
+      <button id="initModel" class="btn primary">Initialize random model</button>
+      <button id="resetModel" class="btn danger">Reset model</button>
+      <button id="saveModel" class="btn">Save model</button>
+      <button id="loadModel" class="btn">Load model</button>
+      <input id="modelFile" type="file" accept=".json,.nslm" hidden>
+     </div>
+    </div>
+   </div>
+
+   <div class="card section">
+    <div class="head"><h2>Training</h2><span class="muted">next-token prediction</span></div>
+    <div class="body">
+     <div class="stats">
+      <div class="stat"><span>Parameters</span><b id="paramCount">—</b></div>
+      <div class="stat"><span>Epoch</span><b id="epoch">0</b></div>
+      <div class="stat"><span>Tokens processed</span><b id="tokensProcessed">0</b></div>
+      <div class="stat"><span>Loss</span><b id="loss">—</b></div>
+      <div class="stat"><span>Tokens/sec</span><b id="tokSec">—</b></div>
+      <div class="stat"><span>Memory estimate</span><b id="memory">—</b></div>
+     </div>
+     <div class="row section">
+      <div class="field"><label>Training steps</label><input id="trainSteps" type="number" min="1" value="100"></div>
+      <button id="trainBtn" class="btn good">Train</button>
+      <button id="stopBtn" class="btn danger">Stop</button>
+      <button id="oneStep" class="btn">One step</button>
+     </div>
+     <div class="section"><div class="progress"><i id="trainProgress"></i></div></div>
+     <div class="section"><canvas id="lossCanvas"></canvas></div>
+     <div id="perfLog" class="log section">No training has been performed.</div>
+    </div>
+   </div>
+
+   <div class="card section">
+    <div class="head"><h2>Model inspection</h2><div class="tabs">
+     <button class="tab active" data-inspect="architecture">Architecture</button>
+     <button class="tab" data-inspect="embedding">Embedding</button>
+     <button class="tab" data-inspect="hidden">Hidden state</button>
+     <button class="tab" data-inspect="logits">Logits</button>
+     <button class="tab" data-inspect="probabilities">Probabilities</button>
+     <button class="tab" data-inspect="gradients">Gradients</button>
+     <button class="tab" data-inspect="weights">Weights</button>
+    </div></div>
+    <div class="body"><pre id="inspector" class="log" style="max-height:430px"></pre></div>
+   </div>
+  </div>
+
+  <aside>
+   <div class="card">
+    <div class="head"><h2>Generation</h2></div>
+    <div class="body">
+     <div class="field"><label>Prompt</label><textarea id="prompt">the </textarea></div>
+     <div class="row section">
+      <div class="field"><label>Max tokens</label><input id="maxTokens" type="number" min="1" max="512" value="80"></div>
+      <div class="field"><label>Temperature</label><input id="temperature" type="number" min=".05" max="3" value=".8" step=".05"></div>
+      <div class="field"><label>Top-k</label><input id="topK" type="number" min="0" max="256" value="20"></div>
+     </div>
+     <div class="row section">
+      <div class="field"><label>Random seed</label><input id="genSeed" type="number" value="42"></div>
+      <button id="generate" class="btn primary">Generate</button>
+     </div>
+     <div id="generationOutput" class="log section" style="min-height:130px">Generated text will appear here exactly as produced by the model.</div>
+    </div>
+   </div>
+
+   <div class="card section">
+    <div class="head"><h2>Next-token probe</h2></div>
+    <div class="body">
+     <div class="field"><label>Context</label><input id="probeContext" value="the "></div>
+     <button id="probe" class="btn section">Run model forward</button>
+     <div class="section"><div id="nextToken" class="notice">No inference yet.</div></div>
+     <div class="section"><label class="muted">Top probabilities</label><div id="probList" class="tokenbox section"></div></div>
+    </div>
+   </div>
+
+   <div class="card section">
+    <div class="head"><h2>Integrity</h2></div>
+    <div class="body">
+     <div class="notice">Training is local. No network request is made. Neural Chat is only an inference interface to this model.</div>
+     <div class="row section"><button id="gradientCheck" class="btn small">Numerical gradient check</button></div>
+     <div id="checkResult" class="notice section">Not run.</div>
+    </div>
+   </div>
+  </aside>
+ </div>
+</section>
+
+<section id="view-chat" class="view">
+ <div class="card chat">
+  <div class="head"><h2>Neural Chat · Live Model</h2><button id="clearChat" class="btn small">Clear</button></div>
+  <div id="messages" class="messages"></div>
+  <div class="composer"><input id="chatInput" placeholder="Type text for the trained model…" autocomplete="off"><button id="sendChat" class="btn primary">Generate</button></div>
+ </div>
+</section>
+
+<section id="view-data" class="view">
+ <div class="grid">
+  <div class="card">
+   <div class="head"><h2>Text dataset</h2><span id="dataState" class="muted">no custom corpus</span></div>
+   <div class="body">
+    <div class="row">
+     <button id="sampleCorpus" class="btn">Load sample corpus</button>
+     <button id="loadTxt" class="btn">Add .txt file</button>
+     <input id="txtFile" type="file" accept=".txt,text/plain" hidden>
+     <button id="clearCorpus" class="btn danger">Clear</button>
+    </div>
+    <textarea id="corpus" class="section" placeholder="Paste training text here. This exact text becomes the training corpus."></textarea>
+    <div class="row section"><button id="prepareData" class="btn primary">Build vocabulary & training stream</button></div>
+   </div>
+  </div>
+  <aside>
+   <div class="card"><div class="head"><h2>Dataset statistics</h2></div><div class="body">
+    <div class="stats" style="grid-template-columns:repeat(2,1fr)">
+     <div class="stat"><span>Characters</span><b id="charCount">0</b></div><div class="stat"><span>Vocabulary</span><b id="vocabCount">0</b></div>
+     <div class="stat"><span>Sequences</span><b id="seqCount">0</b></div><div class="stat"><span>Context</span><b id="dataContext">64</b></div>
+    </div>
+   </div></div>
+   <div class="card section"><div class="head"><h2>Vocabulary</h2></div><div class="body"><div id="vocab" class="tokenbox"></div><div class="field section"><label>Encoded training stream · first 256 tokens</label><pre id="encodedStream" class="log">Build the dataset to inspect token IDs.</pre></div></div></div>
+  </aside>
+ </div>
+</section>
+
+<section id="view-help" class="view">
+ <div class="card helpgrid">
+  <div class="helpnav" id="helpNav">
+   <button class="active" data-help="start">Start here</button>
+   <button data-help="language">1 · Language model</button>
+   <button data-help="tokens">2 · Tokens</button>
+   <button data-help="training">3 · Training</button>
+   <button data-help="model">4 · Model & parameters</button>
+   <button data-help="generation">5 · Generation</button>
+   <button data-help="chat">6 · Neural Chat</button>
+   <button data-help="experiment">7 · First experiment</button>
+   <button data-help="science">8 · Scientific limits</button>
+ </div>
+ <article id="helpContent" class="helpcontent"></article>
+ </div>
+</section>
+
+</main>
+</div>
+
+<script>
+"use strict";
+
+/* ============================================================
+   LOCAL LANGUAGE MODEL ENGINE
+   Character-level recurrent neural language model.
+   Architecture:
+   token id -> embedding -> tanh recurrent state -> logits -> softmax
+   The model is trained with cross-entropy and BPTT.
+   No external inference, no response database, no symbolic solver.
+   ============================================================ */
+
+const $=id=>document.getElementById(id);
+const clamp=(x,a,b)=>Math.max(a,Math.min(b,x));
+const fmt=x=>Number.isFinite(x)?x.toFixed(6):"NaN";
+const fmtInt=x=>Number(x).toLocaleString();
+const zeros=n=>new Float32Array(n);
+const randn=(rng)=>{
+ let u=0,v=0;while(!u)u=rng();while(!v)v=rng();
+ return Math.sqrt(-2*Math.log(u))*Math.cos(2*Math.PI*v);
+};
+function seeded(seed){
+ let a=(Number(seed)>>>0)||1;
+ return ()=>{a|=0;a=(a+0x6D2B79F5)|0;let t=Math.imul(a^a>>>15,1|a);t^=t+Math.imul(t^t>>>7,61|t);return((t^t>>>14)>>>0)/4294967296};
+}
+function softmax(logits){
+ let mx=-Infinity;for(let i=0;i<logits.length;i++)if(logits[i]>mx)mx=logits[i];
+ const p=new Float32Array(logits.length);let s=0;
+ for(let i=0;i<logits.length;i++){p[i]=Math.exp(clamp(logits[i]-mx,-80,20));s+=p[i]}
+ for(let i=0;i<p.length;i++)p[i]/=s||1;
+ return p;
+}
+function sample(probs,rng,temperature=1,topK=0){
+ let ids=Array.from(probs,(v,i)=>i);
+ if(topK>0&&topK<ids.length){
+  ids.sort((a,b)=>probs[b]-probs[a]);ids=ids.slice(0,topK);
+ }
+ const t=Math.max(.05,temperature);
+ let vals=new Float32Array(ids.length),sum=0;
+ for(let i=0;i<ids.length;i++){vals[i]=Math.pow(Math.max(probs[ids[i]],1e-12),1/t);sum+=vals[i]}
+ let r=rng()*sum;
+ for(let i=0;i<ids.length;i++){r-=vals[i];if(r<=0)return ids[i]}
+ return ids.at(-1);
+}
+
+/* -------- tokenizer -------- */
+class CharTokenizer{
+ constructor(){this.chars=[];this.map=new Map();this.encoded=null}
+ build(text){
+  const set=new Set(Array.from(text));
+  this.chars=Array.from(set).sort((a,b)=>a.codePointAt(0)-b.codePointAt(0));
+  this.map=new Map(this.chars.map((c,i)=>[c,i]));
+  this.encoded=new Int32Array(Array.from(text,ch=>this.map.get(ch)));
+ }
+ encode(text){
+  if(!this.map.size)return new Int32Array();
+  const out=[];for(const ch of Array.from(text)){if(this.map.has(ch))out.push(this.map.get(ch))}
+  return Int32Array.from(out);
+ }
+ decode(ids){
+  return Array.from(ids,i=>this.chars[i]??"�").join("");
+ }
+ get size(){return this.chars.length}
+}
+
+/* -------- recurrent language model -------- */
+class RNNLM{
+ constructor(vocab,emb,hidden,context,layers=1,seed=42){
+  this.vocab=vocab;this.emb=emb;this.hidden=hidden;this.context=context;this.layers=Math.max(1,layers|0);this.seed=seed;
+  this.rng=seeded(seed);this.step=0;this.epoch=0;this.tokensProcessed=0;this.lossHistory=[];
+  this.allocate();this.reset();
+ }
+ allocate(){
+  const V=this.vocab,E=this.emb,H=this.hidden,L=this.layers;
+  this.E=new Float32Array(V*E);
+  this.Wxh=Array(L);this.Whh=Array(L);this.bh=Array(L);
+  this.gWxh=Array(L);this.gWhh=Array(L);this.gbh=Array(L);
+  for(let l=0;l<L;l++){
+   const inputDim=l===0?E:H;
+   this.Wxh[l]=new Float32Array(H*inputDim);
+   this.Whh[l]=new Float32Array(H*H);
+   this.bh[l]=new Float32Array(H);
+   this.gWxh[l]=new Float32Array(H*inputDim);
+   this.gWhh[l]=new Float32Array(H*H);
+   this.gbh[l]=new Float32Array(H);
+  }
+  this.Why=new Float32Array(V*H);this.by=new Float32Array(V);
+  this.gWhy=new Float32Array(V*H);this.gby=new Float32Array(V);
+  this.gE=new Float32Array(V*E);
+  for(let l=0;l<L;l++){
+   this.gWxh[l]=new Float32Array(this.Wxh[l].length);
+   this.gWhh[l]=new Float32Array(this.Whh[l].length);
+   this.gbh[l]=new Float32Array(H);
+  }
+ }
+ reset(seed=this.seed){
+  this.seed=seed;this.rng=seeded(seed);this.step=0;this.epoch=0;this.tokensProcessed=0;this.lossHistory=[];
+  const scaleE=1/Math.sqrt(this.emb),scaleH=1/Math.sqrt(this.hidden);
+  for(let i=0;i<this.E.length;i++)this.E[i]=randn(this.rng)*scaleE;
+  for(let l=0;l<this.layers;l++){
+   for(let i=0;i<this.Wxh[l].length;i++)this.Wxh[l][i]=randn(this.rng)*scaleH;
+   for(let i=0;i<this.Whh[l].length;i++)this.Whh[l][i]=randn(this.rng)*scaleH;
+   this.bh[l].fill(0);
+  }
+  for(let i=0;i<this.Why.length;i++)this.Why[i]=randn(this.rng)*scaleH;
+  this.by.fill(0);this.last=null;this.grads=null;
+ }
+ parameterCount(){
+  let n=this.E.length+this.Why.length+this.by.length;
+  for(let l=0;l<this.layers;l++)n+=this.Wxh[l].length+this.Whh[l].length+this.bh[l].length;
+  return n;
+ }
+ memoryBytes(){return this.parameterCount()*8}
+ forward(tokens,keepCache=true){
+  const T=Math.min(tokens.length,this.context),V=this.vocab,E=this.emb,H=this.hidden,L=this.layers;
+  const hs=Array.from({length:L},()=>new Float32Array(T*H));
+  const logits=new Float32Array(T*V),probs=new Float32Array(T*V);
+  for(let t=0;t<T;t++){
+   const id=tokens[t],eb=id*E;
+   for(let l=0;l<L;l++){
+    const h=hs[l].subarray(t*H,(t+1)*H);
+    const prev=t?hs[l].subarray((t-1)*H,t*H):null;
+    const inputDim=l===0?E:H;
+    const lower=l===0?null:hs[l-1].subarray(t*H,(t+1)*H);
+    for(let i=0;i<H;i++){
+     let z=this.bh[l][i];
+     const row=i*inputDim;
+     if(l===0){for(let j=0;j<E;j++)z+=this.Wxh[l][row+j]*this.E[eb+j]}
+     else{for(let j=0;j<H;j++)z+=this.Wxh[l][row+j]*lower[j]}
+     if(prev)for(let j=0;j<H;j++)z+=this.Whh[l][i*H+j]*prev[j];
+     h[i]=Math.tanh(z);
+    }
+   }
+   const top=hs[L-1].subarray(t*H,(t+1)*H),lb=t*V;
+   for(let k=0;k<V;k++){let z=this.by[k],row=k*H;for(let j=0;j<H;j++)z+=this.Why[row+j]*top[j];logits[lb+k]=z}
+   probs.set(softmax(logits.subarray(lb,lb+V)),lb);
+  }
+  if(keepCache)this.last={tokens:Int32Array.from(tokens.slice(0,T)),hs,logits,probs};
+  return {logits,probs,hs};
+ }
+ loss(tokens,targets){
+  const out=this.forward(tokens,true),V=this.vocab,T=Math.min(tokens.length,targets.length);
+  let loss=0;for(let t=0;t<T;t++)loss-=Math.log(Math.max(out.probs[t*V+targets[t]],1e-12));return loss/T;
+ }
+ zeroGrads(){
+  this.gE.fill(0);this.gWhy.fill(0);this.gby.fill(0);
+  for(let l=0;l<this.layers;l++){this.gWxh[l].fill(0);this.gWhh[l].fill(0);this.gbh[l].fill(0)}
+ }
+ backward(tokens,targets){
+  const V=this.vocab,E=this.emb,H=this.hidden,L=this.layers,T=Math.min(tokens.length,targets.length);
+  const out=this.forward(tokens,true);this.zeroGrads();let loss=0;
+  const dhNext=Array.from({length:L},()=>new Float32Array(H));
+  for(let t=T-1;t>=0;t--){
+   const id=tokens[t],target=targets[t],lb=t*V;
+   const dy=new Float32Array(V);
+   for(let k=0;k<V;k++)dy[k]=out.probs[lb+k];
+   dy[target]-=1;loss-=Math.log(Math.max(out.probs[lb+target],1e-12));
+   const dLayer=Array.from({length:L},(_,l)=>new Float32Array(dhNext[l]));
+   const nextDh=Array.from({length:L},()=>new Float32Array(H));
+   const top=out.hs[L-1].subarray(t*H,(t+1)*H);
+   for(let k=0;k<V;k++){
+    this.gby[k]+=dy[k];const row=k*H;
+    for(let j=0;j<H;j++){this.gWhy[row+j]+=dy[k]*top[j];dLayer[L-1][j]+=this.Why[row+j]*dy[k]}
+   }
+   for(let l=L-1;l>=0;l--){
+    const h=out.hs[l].subarray(t*H,(t+1)*H);
+    const prev=t?out.hs[l].subarray((t-1)*H,t*H):null;
+    const inputDim=l===0?E:H;
+    const input=l===0?null:out.hs[l-1].subarray(t*H,(t+1)*H);
+    const delta=new Float32Array(H);
+    for(let i=0;i<H;i++)delta[i]=dLayer[l][i]*(1-h[i]*h[i]);
+    for(let i=0;i<H;i++){
+     this.gbh[l][i]+=delta[i];
+     const row=i*inputDim;
+     if(l===0){
+      const eb=id*E;
+      for(let j=0;j<E;j++){this.gWxh[l][row+j]+=delta[i]*this.E[eb+j];this.gE[eb+j]+=delta[i]*this.Wxh[l][row+j]}
+     }else{
+      for(let j=0;j<H;j++){this.gWxh[l][row+j]+=delta[i]*input[j];dLayer[l-1][j]+=this.Wxh[l][row+j]*delta[i]}
+     }
+     if(prev)for(let j=0;j<H;j++)nextDh[l][j]+=this.Whh[l][i*H+j]*delta[i];
+    }
+   }
+   for(let l=0;l<L;l++)dhNext[l]=nextDh[l];
+  }
+  const inv=1/T;
+  const all=[this.gE,this.gWhy,this.gby];for(let l=0;l<L;l++)all.push(this.gWxh[l],this.gWhh[l],this.gbh[l]);
+  for(const g of all)for(let i=0;i<g.length;i++)g[i]*=inv;
+  this.grads={gE:this.gE,gWxh:this.gWxh,gWhh:this.gWhh,gbh:this.gbh,gWhy:this.gWhy,gby:this.gby};
+  return loss/T;
+ }
+ update(lr=.003,clip=5){
+  if(!this.grads)throw Error("Run a training step first.");
+  let norm=0;
+  const all=[this.gE,this.gWhy,this.gby];for(let l=0;l<this.layers;l++)all.push(this.gWxh[l],this.gWhh[l],this.gbh[l]);
+  for(const g of all)for(let i=0;i<g.length;i++)norm+=g[i]*g[i];
+  const scale=Math.sqrt(norm)>clip?clip/Math.sqrt(norm):1;
+  for(let i=0;i<this.E.length;i++)this.E[i]-=lr*this.gE[i]*scale;
+  for(let i=0;i<this.Why.length;i++)this.Why[i]-=lr*this.gWhy[i]*scale;
+  for(let i=0;i<this.by.length;i++)this.by[i]-=lr*this.gby[i]*scale;
+  for(let l=0;l<this.layers;l++){
+   for(let i=0;i<this.Wxh[l].length;i++)this.Wxh[l][i]-=lr*this.gWxh[l][i]*scale;
+   for(let i=0;i<this.Whh[l].length;i++)this.Whh[l][i]-=lr*this.gWhh[l][i]*scale;
+   for(let i=0;i<this.bh[l].length;i++)this.bh[l][i]-=lr*this.gbh[l][i]*scale;
+  }
+  this.step++;
+ }
+ trainBatch(tokens,targets,lr=.003){
+  const t0=performance.now();
+  const loss=this.backward(tokens,targets);
+  const backwardMs=performance.now()-t0;
+  const t1=performance.now();
+  this.update(lr);
+  const updateMs=performance.now()-t1;
+  this.tokensProcessed+=tokens.length;
+  return {loss,backwardMs,updateMs};
+}
+ predictNext(tokens){
+  if(!tokens.length)return null;const t=tokens.slice(-this.context),out=this.forward(t,true),T=t.length,V=this.vocab;
+  return {probs:out.probs.subarray((T-1)*V,T*V),hidden:out.hs[this.layers-1].subarray((T-1)*this.hidden,T*this.hidden),logits:out.logits.subarray((T-1)*V,T*V)};
+ }
+ toJSON(){
+  const pack=a=>Array.from(a);
+  return {type:"NEURAL_ENVIRONMENT_SLM",version:2,vocab:this.vocab,emb:this.emb,hidden:this.hidden,context:this.context,layers:this.layers,seed:this.seed,step:this.step,epoch:this.epoch,tokensProcessed:this.tokensProcessed,
+   E:pack(this.E),Wxh:this.Wxh.map(pack),Whh:this.Whh.map(pack),bh:this.bh.map(pack),Why:pack(this.Why),by:pack(this.by)}
+ }
+ static fromJSON(o){
+  const m=new RNNLM(o.vocab,o.emb,o.hidden,o.context,o.layers||1,o.seed);
+  m.E.set(o.E);for(let l=0;l<m.layers;l++){m.Wxh[l].set(o.Wxh[l]);m.Whh[l].set(o.Whh[l]);m.bh[l].set(o.bh[l])}
+  m.Why.set(o.Why);m.by.set(o.by);m.step=o.step||0;m.epoch=o.epoch||0;m.tokensProcessed=o.tokensProcessed||0;return m;
+ }
+}
+
+/* -------- app state -------- */
+const tokenizer=new CharTokenizer();
+let corpus="";
+let model=null;
+let running=false;
+let inspectMode="architecture";
+let trainRng=seeded(42);
+let trainingSeqs=[];
+let lastProbe=null;
+
+/* -------- model presets -------- */
+const PRESETS={
+ tiny:{emb:4,hidden:16,layers:1},
+ small:{emb:16,hidden:64,layers:1},
+ medium:{emb:32,hidden:256,layers:1},
+ large:{emb:48,hidden:512,layers:1},
+ huge:{emb:64,hidden:1024,layers:1}
+};
+function architectureFromUI(){
+ const p=$("modelPreset").value;
+ if(p==="custom")return {emb:clamp(+$("customEmb").value||32,4,256),hidden:clamp(+$("customHidden").value||64,8,1024),layers:clamp(+$("customLayers").value||1,1,4)};
+ return PRESETS[p];
+}
+function estimatedParams(vocab,arch){
+ const V=Math.max(vocab,1),E=arch.emb,H=arch.hidden;
+ // This first browser implementation uses one recurrent sequence layer.
+ return V*E + H*E + H*H + H + V*H + V;
+}
+function updateSizeUI(){
+ const arch=architectureFromUI(),V=tokenizer.size||64,p=estimatedParams(V,arch);
+ $("sizeWarning").textContent=`Approximate parameters with vocabulary ${V}: ${fmtInt(p)}. Memory for weights + gradients: ~${formatBytes(p*8)}. Larger configurations can become computationally expensive in a browser.`;
+}
+function formatBytes(n){
+ if(n<1024)return `${n} B`;if(n<1024**2)return `${(n/1024).toFixed(1)} KB`;if(n<1024**3)return `${(n/1024**2).toFixed(1)} MB`;return `${(n/1024**3).toFixed(2)} GB`;
+}
+
+/* -------- data -------- */
+const SAMPLE=`the machine learns from examples.
+a small language model predicts one character after another.
+the model does not know the future character.
+it sees a context, computes a hidden state, produces logits, and predicts a distribution.
+training changes weights so that the probability of the observed next character becomes larger.
+small models are limited. they may repeat fragments, make mistakes, or produce strange text.
+that is useful for an experiment because the output is produced by the learned parameters.
+a neural network is a collection of numerical parameters changed by optimization.
+more parameters do not automatically mean more intelligence.
+data, optimization, architecture, and context all matter.
+`;
+
+function buildDataset(){
+ if(!corpus.trim()){alert("Add training text first.");return}
+ tokenizer.build(corpus);
+ const C=+$("contextLen").value||64;
+ trainingSeqs=[];
+ const ids=tokenizer.encoded;
+ for(let i=0;i+1<ids.length;i+=Math.max(1,Math.floor(C/2))){
+  const end=Math.min(i+C,ids.length-1);
+  const inp=ids.slice(i,end),tar=ids.slice(i+1,end+1);
+  if(inp.length>=2)trainingSeqs.push({inp,tar});
+ }
+ $("charCount").textContent=fmtInt(ids.length);$("vocabCount").textContent=fmtInt(tokenizer.size);$("seqCount").textContent=fmtInt(trainingSeqs.length);$("dataContext").textContent=C;
+ $("dataState").textContent=`ready · ${fmtInt(ids.length)} chars`;
+ renderVocab();updateSizeUI();
+ logPerf(`DATASET  •  ${fmtInt(ids.length)} characters  •  vocabulary ${fmtInt(tokenizer.size)}  •  ${fmtInt(trainingSeqs.length)} sequences`);
+}
+function renderVocab(){
+ const el=$("vocab");el.innerHTML="";
+ tokenizer.chars.forEach((c,i)=>{const d=document.createElement("span");d.className="tok";d.innerHTML=`<b>${i}</b> ${escapeHtml(JSON.stringify(c))}`;el.appendChild(d)});
+}
+function escapeHtml(s){return s.replace(/[&<>"']/g,m=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[m]))}
+function makeTrainingBatch(){
+ if(!trainingSeqs.length)throw Error("Build the dataset first.");
+ const item=trainingSeqs[Math.floor(trainRng()*trainingSeqs.length)];
+ return item;
+}
+
+/* -------- UI state -------- */
+function logPerf(s){$("perfLog").textContent += ( $("perfLog").textContent==="No training has been performed." ? "" : "\\n")+s;$("perfLog").scrollTop=$("perfLog").scrollHeight}
+function setStatus(s){$("modelStatus").textContent=s}
+function renderStats(){
+ $("paramCount").textContent=model?fmtInt(model.parameterCount()):"—";
+ $("epoch").textContent=model?model.epoch:0;
+ $("tokensProcessed").textContent=model?fmtInt(model.tokensProcessed):0;
+ $("loss").textContent=model&&model.lossHistory.length?fmt(model.lossHistory.at(-1)):"—";
+ $("memory").textContent=model?formatBytes(model.memoryBytes()):"—";
+ updateSizeUI();drawLoss();renderInspector();
+}
+function drawLoss(){
+ const c=$("lossCanvas"),r=c.getBoundingClientRect(),d=devicePixelRatio||1;c.width=Math.max(1,r.width*d);c.height=190*d;
+ const g=c.getContext("2d");g.setTransform(d,0,0,d,0,0);g.clearRect(0,0,r.width,190);
+ if(!model||model.lossHistory.length<2)return;
+ const a=model.lossHistory,mx=Math.max(...a),mn=Math.min(...a),span=Math.max(mx-mn,1e-9);
+ g.strokeStyle="#25323e";for(let i=1;i<5;i++){const y=i*190/5;g.beginPath();g.moveTo(0,y);g.lineTo(r.width,y);g.stroke()}
+ g.strokeStyle="#6dbbff";g.lineWidth=2;g.beginPath();
+ a.forEach((v,i)=>{const x=5+i*(r.width-10)/(a.length-1),y=182-(v-mn)/span*165;i?g.lineTo(x,y):g.moveTo(x,y)});g.stroke();
+}
+function renderInspector(){
+ const el=$("inspector");
+ if(!model){el.textContent="Initialize a model after building a dataset.";return}
+ let s="";
+ if(inspectMode==="architecture"){
+  s=`MODEL\\n\\nType: Character-level recurrent language model\\nArchitecture: token embedding → tanh recurrent state → vocabulary logits\\nVocabulary: ${model.vocab}\\nEmbedding dimension: ${model.emb}\\nHidden dimension: ${model.hidden}\\nContext length: ${model.context}\\nParameters: ${fmtInt(model.parameterCount())}\\nMemory (weights + gradients): ${formatBytes(model.memoryBytes())}\\n\\nTraining objective\\nP(next character | previous characters)\\n\\nLoss\\nCross-entropy: -log P(target token)`;
+ }else if(inspectMode==="embedding"){
+  if(!lastProbe)s="Run Generation or the Next-token probe first.";
+  else{
+   const id=lastProbe.lastId,base=id*model.emb;
+   s=`TOKEN\\nID: ${id}\\nCharacter: ${JSON.stringify(tokenizer.chars[id])}\\n\\nEMBEDDING VECTOR\\n`;
+   for(let i=0;i<model.emb;i++)s+=`${i}: ${fmt(model.E[base+i])}\\n`;
+  }
+ }else if(inspectMode==="hidden"){
+  if(!lastProbe)s="Run inference first.";
+  else{s=`HIDDEN STATE · last context position\\nDimension: ${model.hidden}\\n\\n`;for(let i=0;i<lastProbe.hidden.length;i++)s+=`${i}: ${fmt(lastProbe.hidden[i])}\\n`}
+ }else if(inspectMode==="logits"){
+  if(!lastProbe)s="Run inference first.";
+  else{s=`LOGITS · next-token distribution\\nVocabulary: ${model.vocab}\\n\\n`;for(let i=0;i<lastProbe.logits.length;i++)s+=`${i} ${JSON.stringify(tokenizer.chars[i])}: ${fmt(lastProbe.logits[i])}\\n`}
+ }else if(inspectMode==="probabilities"){
+  if(!lastProbe)s="Run inference first.";
+  else{s=`PROBABILITIES · next-token distribution\\n\\n`;const ids=Array.from(lastProbe.probs,(v,i)=>i).sort((a,b)=>lastProbe.probs[b]-lastProbe.probs[a]).slice(0,Math.min(60,lastProbe.probs.length));ids.forEach(i=>s+=`${i} ${JSON.stringify(tokenizer.chars[i])}: ${(lastProbe.probs[i]*100).toFixed(3)}%\\n`)}
+ }else if(inspectMode==="gradients"){
+  if(!model.grads)s="No gradients exist yet. Run training.";else{s=`GRADIENT NORMS\\n\\ndE: ${fmt(norm(model.gE))}\\ndWxh: ${fmt(norm(model.gWxh))}\\ndWhh: ${fmt(norm(model.gWhh))}\\ndbh: ${fmt(norm(model.gbh))}\\ndWhy: ${fmt(norm(model.gWhy))}\\ndby: ${fmt(norm(model.gby))}`}
+ }else{
+  s=`WEIGHT ARRAYS\\n\\nEmbedding: ${model.E.length} values\\nInput→hidden: ${model.Wxh.length} values\\nHidden→hidden: ${model.Whh.length} values\\nHidden→output: ${model.Why.length} values\\nBiases: ${model.bh.length+model.by.length} values\\n\\nParameter count: ${fmtInt(model.parameterCount())}\\n\\nFirst 30 embedding values:\\n`;
+  for(let i=0;i<Math.min(30,model.E.length);i++)s+=`${i}: ${fmt(model.E[i])}\\n`;
+ }
+ el.textContent=s;
+}
+function norm(a){let s=0;for(let i=0;i<a.length;i++)s+=a[i]*a[i];return Math.sqrt(s)}
+
+/* -------- model lifecycle -------- */
+function initializeModel(){
+ if(!tokenizer.size){alert("Build a dataset first so the model has a vocabulary.");return}
+ const a=architectureFromUI();
+ const p=estimatedParams(tokenizer.size,a);
+ if(p>2500000&&!confirm(`This configuration has about ${fmtInt(p)} parameters and may be very slow or memory-heavy in a browser. Continue?`))return;
+ model=new RNNLM(tokenizer.size,a.emb,a.hidden,+$("contextLen").value||64,a.layers,42);
+ setStatus("random · untrained");
+ logPerf(`MODEL  •  initialized randomly  •  ${fmtInt(model.parameterCount())} parameters  •  ${formatBytes(model.memoryBytes())}`);
+ renderStats();
+}
+function resetModel(){if(!model){initializeModel();return}model.reset(42);setStatus("random · untrained");logPerf("MODEL  •  reset to fresh random parameters");renderStats()}
+function ensureModel(){if(!model)throw Error("Initialize the model first.");if(!tokenizer.size)throw Error("Build a dataset first.");}
+
+/* -------- training -------- */
+async function trainSteps(count){
+ try{
+  ensureModel();if(running)return;running=true;setStatus("training");
+  const lr=+$("learningRate").value||.003, start=performance.now(),total=Math.max(1,count);
+  for(let s=0;s<total&&running;s++){
+   const b=makeTrainingBatch(),t0=performance.now(),result=model.trainBatch(b.inp,b.tar,lr),dt=performance.now()-t0,loss=result.loss;
+   model.lossHistory.push(loss);if(model.lossHistory.length>500)model.lossHistory.shift();
+   if(s%2===0||s===total-1){
+    $("trainProgress").style.width=`${((s+1)/total)*100}%`;
+    const elapsed=(performance.now()-start)/1000,tps=model.tokensProcessed/Math.max(elapsed,.001);
+    $("tokSec").textContent=fmtInt(Math.round(tps));
+    logPerf(`STEP ${model.step}  •  loss ${fmt(loss)}  •  ${fmtInt(b.inp.length)} tokens  •  backward ${result.backwardMs.toFixed(1)} ms  •  update ${result.updateMs.toFixed(1)} ms  •  total ${dt.toFixed(1)} ms`);
+    renderStats();await new Promise(requestAnimationFrame);
+   }
+  }
+  running=false;setStatus("trained");renderStats();
+ }catch(e){running=false;setStatus(model?"stopped":"untrained");alert(e.message)}
+}
+function oneStep(){trainSteps(1)}
+function stopTraining(){running=false;setStatus("stopped")}
+
+/* -------- generation -------- */
+function inferenceFromText(text){
+ ensureModel();
+ const ids=tokenizer.encode(text);
+ if(!ids.length)throw Error("Prompt contains no characters from the training vocabulary.");
+ const ctx=Array.from(ids.slice(-model.context));
+ const p=model.predictNext(ctx);
+ lastProbe={...p,lastId:ctx.at(-1)};
+ renderInspector();return p;
+}
+function generateText(prompt,maxTokens,temp,topK,seed){
+ ensureModel();
+ let ids=Array.from(tokenizer.encode(prompt));
+ if(!ids.length)throw Error("Prompt contains no characters from the training vocabulary.");
+ const rng=seeded(seed);
+ let generated=prompt;
+ for(let n=0;n<maxTokens;n++){
+  const ctx=ids.slice(-model.context);
+  const p=model.predictNext(ctx);
+  const id=sample(p.probs,rng,temp,topK);
+  lastProbe={...p,lastId:ctx.at(-1),selected:id};
+  ids.push(id);generated+=tokenizer.chars[id];
+ }
+ renderInspector();return generated;
+}
+function doGenerate(){
+ try{
+  const prompt=$("prompt").value;
+  const text=generateText(prompt,clamp(+$("maxTokens").value||80,1,512),+$("temperature").value||.8,Math.max(0,Math.floor(+$("topK").value||20)),+$("genSeed").value||42);
+  $("generationOutput").textContent=text;
+ }catch(e){alert(e.message)}
+}
+function doProbe(){
+ try{
+  const p=inferenceFromText($("probeContext").value);
+  const ids=Array.from(p.probs,(v,i)=>i).sort((a,b)=>p.probs[b]-p.probs[a]).slice(0,12);
+  const best=ids[0];$("nextToken").innerHTML=`Most probable next character: <b>${escapeHtml(JSON.stringify(tokenizer.chars[best]))}</b> · ${(p.probs[best]*100).toFixed(3)}%`;
+  const el=$("probList");el.innerHTML="";ids.forEach(i=>{const d=document.createElement("span");d.className="tok";d.textContent=`${JSON.stringify(tokenizer.chars[i])} ${(p.probs[i]*100).toFixed(2)}%`;el.appendChild(d)});
+ }catch(e){alert(e.message)}
+}
+
+/* -------- save/load -------- */
+function saveModel(){
+ try{
+  ensureModel();
+  const payload={model:model.toJSON(),tokenizer:{chars:tokenizer.chars},corpus,settings:{context:+$("contextLen").value||64}};
+  const blob=new Blob([JSON.stringify(payload)],{type:"application/json"});
+  const a=document.createElement("a");a.href=URL.createObjectURL(blob);a.download="neural-model.nslm";a.click();setTimeout(()=>URL.revokeObjectURL(a.href),1000);
+ }catch(e){alert(e.message)}
+}
+function loadModelFile(file){
+ const reader=new FileReader();
+ reader.onload=()=>{
+  try{
+   const p=JSON.parse(reader.result);if(p?.model?.type!=="NEURAL_ENVIRONMENT_SLM")throw Error("Not a Neural Environment model file.");
+   tokenizer.chars=p.tokenizer.chars;tokenizer.map=new Map(tokenizer.chars.map((c,i)=>[c,i]));corpus=p.corpus||"";
+   if(corpus)tokenizer.encoded=new Int32Array(Array.from(corpus,ch=>tokenizer.map.get(ch)).filter(v=>v!==undefined));
+   model=RNNLM.fromJSON(p.model);
+   $("contextLen").value=model.context;$("corpus").value=corpus;
+   $("charCount").textContent=fmtInt(tokenizer.encoded?.length||0);$("vocabCount").textContent=fmtInt(tokenizer.size);renderVocab();
+   setStatus("loaded model");logPerf(`MODEL  •  loaded ${fmtInt(model.parameterCount())} parameters`);renderStats();
+  }catch(e){alert(e.message)}
+ };
+ reader.readAsText(file);
+}
+
+/* -------- gradient check -------- */
+function gradientCheck(){
+ try{
+  ensureModel();
+  const b=makeTrainingBatch(),eps=1e-3;
+  model.backward(b.inp,b.tar);const analytic=model.gWxh[0];
+  const original=model.Wxh[0];
+  model.Wxh[0]=original+eps;const lp=model.loss(b.inp,b.tar);
+  model.Wxh[0]=original-eps;const lm=model.loss(b.inp,b.tar);
+  model.Wxh[0]=original;
+  const numeric=(lp-lm)/(2*eps),rel=Math.abs(analytic-numeric)/(Math.abs(analytic)+Math.abs(numeric)+1e-9);
+  $("checkResult").innerHTML=`Analytical: <b>${fmt(analytic)}</b><br>Numerical: <b>${fmt(numeric)}</b><br>Relative error: <b class="${rel<1e-2?"goodtxt":"badtxt"}">${rel.toExponential(3)}</b><br>${rel<1e-2?"PASS — analytical backprop agrees with finite difference.":"CHECK — discrepancy detected."}`;
+ }catch(e){alert(e.message)}
+}
+
+/* -------- chat: ONLY model inference -------- */
+function addMessage(text,type,meta=""){
+ const d=document.createElement("div");d.className="msg "+type;d.textContent=text;
+ if(meta){const m=document.createElement("div");m.className="muted";m.style.cssText="font:9px ui-monospace,monospace;margin-top:8px";m.textContent=meta;d.appendChild(m)}
+ $("messages").appendChild(d);$("messages").scrollTop=$("messages").scrollHeight;
+}
+function sendChat(){
+ const q=$("chatInput").value.trim();if(!q)return;
+ addMessage(q,"user");$("chatInput").value="";
+ if(!model || model.step===0){addMessage("MODEL NOT TRAINED — Neural Chat cannot generate text until the language model has completed at least one training update.","system");return}
+ try{
+  const max=64,temp=.8,topK=20,seed=Math.floor(Math.random()*0xffffffff);
+  const out=generateText(q,max,temp,topK,seed);
+  const generated=out.slice(q.length);
+  addMessage(generated||"","model",`MODEL OUTPUT  •  Parameters: ${fmtInt(model.parameterCount())}  •  Context: ${model.context} tokens  •  Generated: ${max} tokens  •  Temperature: ${temp}`);
+ }catch(e){addMessage("MODEL ERROR: "+e.message,"system")}
+}
+
+/* -------- help -------- */
+const help={
+start:`<h1>Neural Environment — Local Language Model Lab</h1>
+<p>This project is now a small, fully offline language-model laboratory. It is not an algebra solver and it is not a rule-based chatbot.</p>
+<h2>The core experiment</h2><p>You provide text. The system turns each character into an integer token. A randomly initialized recurrent neural network reads sequences of those tokens and learns to predict the next character.</p>
+<pre class="log">characters → token IDs → embeddings → recurrent hidden state → logits → softmax → next-token probabilities</pre>
+<p>Training changes the actual numerical parameters. Neural Chat uses those same parameters for generation.</p>
+<h2>Scientific rule</h2><p>If the model generates nonsense, the application shows the nonsense. There is no cleanup, canned response, symbolic solver, external LLM, API, or fallback response engine.</p>
+<h2>Offline</h2><p>Training and inference happen locally in the browser. The application makes no network request.</p>`,
+
+language:`<h1>1 · What Is a Language Model?</h1><p>A language model estimates the probability of the next token given previous tokens:</p><pre class="log">P(next token | previous tokens)</pre><p>This implementation uses a character-level recurrent neural network. It is intentionally small and understandable rather than being a production chatbot.</p><h2>What it learns</h2><p>It can learn statistical regularities such as common character sequences, punctuation patterns, word fragments, spacing, and other structures present in the training corpus.</p><h2>What it does not automatically learn</h2><p>A tiny model does not automatically acquire reasoning, factual knowledge, understanding, or general intelligence. It learns from the numerical training objective and data you provide.</p>`,
+
+tokens:`<h1>2 · Tokens and Vocabulary</h1><p>The first implementation uses <b>characters as tokens</b>. If the corpus contains <code>hello</code>, its characters receive integer IDs such as:</p><pre class="log">h → 0\ne → 1\nl → 2\no → 3</pre><p>The exact IDs depend on the vocabulary built from the corpus.</p><h2>Why characters?</h2><p>Character tokenization keeps the laboratory self-contained and makes the vocabulary small. It also makes the entire tokenization process visible.</p><h2>Training stream</h2><p>For a sequence <code>hello</code>, the model can be trained on:</p><pre class="log">input:  h e l l\ntarget: e l l o</pre><p>Every position asks the same question: “given the preceding context, what comes next?”</p>`,
+
+training:`<h1>3 · Training</h1><h2>Cross-entropy</h2><p>For the correct next token, the loss is:</p><pre class="log">L = -log P(correct next token)</pre><p>If the model assigns high probability to the observed next character, loss is small. If it assigns tiny probability, loss is large.</p><h2>Backpropagation</h2><p>The implementation calculates gradients through the recurrent network using backpropagation through time. It propagates error from later sequence positions back through the hidden states and into embeddings and weights.</p><h2>Update</h2><pre class="log">parameter ← parameter − learning_rate × gradient</pre><p>Gradient clipping is applied when the total gradient norm becomes too large.</p><h2>What “Train” really does</h2><p>It repeatedly selects a real sequence from your corpus, performs forward propagation, calculates cross-entropy, runs BPTT, and updates the actual Float32 parameter arrays.</p>`,
+
+model:`<h1>4 · Model and Parameters</h1><p>The current architecture is a compact recurrent language model. The Custom configuration can create multiple stacked recurrent sequence layers; those layers are real trainable parameter sets, not decorative UI controls:</p><pre class="log">token ID\n   ↓\nembedding vector\n   ↓\ntanh recurrent hidden state\n   ↓\nvocabulary logits\n   ↓\nsoftmax probabilities</pre><h2>Sequence layers</h2><p>The recurrent core can be stacked in the Experimental configuration. Each layer has its own input-to-hidden, recurrent and bias parameters, and backpropagation passes through all of them.</p><h2>Parameters</h2><ul><li>Token embedding matrix</li><li>Input-to-hidden weights</li><li>Hidden-to-hidden recurrent weights</li><li>Hidden bias</li><li>Hidden-to-vocabulary weights</li><li>Vocabulary bias</li></ul><p>The parameter counter is calculated from the actual array sizes. Larger model presets increase embedding and hidden dimensions. The vocabulary is determined by your corpus.</p><h2>Why a recurrent model?</h2><p>A small recurrent model is much more practical to implement from scratch in a single offline HTML file while still genuinely modelling sequence context. It is not pretending to be a Transformer.</p>`,
+
+generation:`<h1>5 · Generation</h1><p>Generation is autoregressive. The model never receives a target answer during generation.</p><pre class="log">prompt\n ↓\ntokenize\n ↓\nmodel forward pass\n ↓\nlogits\n ↓\nsoftmax\n ↓\nsample next token\n ↓\nappend token\n ↓\nrepeat</pre><h2>Temperature</h2><p>Temperature changes how concentrated the sampling distribution is. Lower values favor high-probability tokens; higher values make lower-probability tokens more likely.</p><h2>Top-k</h2><p>Top-k limits sampling to the k highest-probability tokens. Set it to zero to sample from the complete vocabulary.</p><p>The generated text is displayed exactly as produced. There is no grammatical cleanup.</p>`,
+
+chat:`<h1>6 · Neural Chat · Live Model</h1><p>Neural Chat is only an interface to the current trained model.</p><pre class="log">user text\n ↓\ntokenizer\n ↓\ncurrent model weights\n ↓\nautoregressive sampling\n ↓\nmodel output</pre><p>There is no response database and no symbolic solver in this interface. If the model has not been trained, Chat explicitly says so. If the model generates garbage, that garbage is displayed.</p><h2>Important</h2><p>The Chat does not train a special model for each question. Training happens in the Model Lab. Chat only performs inference with the model that currently exists.</p>`,
+
+experiment:`<h1>7 · First Experiment — Train Your First Language Model</h1><ol><li>Open <b>Dataset</b>.</li><li>Click <b>Load sample corpus</b>, or paste your own text.</li><li>Click <b>Build vocabulary & training stream</b>.</li><li>Inspect the character count and vocabulary.</li><li>Return to <b>Model Lab</b>.</li><li>Choose <b>Tiny</b> or <b>Small</b> first.</li><li>Click <b>Initialize random model</b>.</li><li>Observe the parameter count. These parameters start randomly initialized.</li><li>Click <b>One step</b>. Inspect the loss and gradients.</li><li>Click <b>Train</b> and run a few hundred steps.</li><li>Watch the loss and tokens/sec.</li><li>Enter a prompt in Generation and click <b>Generate</b>.</li><li>Inspect the next-token probabilities.</li><li>Open <b>Neural Chat · Live Model</b> and type a prompt.</li></ol><h2>What to expect</h2><p>Early output may look like <code>th he the a...</code>, repeated fragments, random characters, or complete nonsense. That is normal for a tiny model. After enough training on enough data, statistical structure may become visible. The experiment is the learning process, not a promise of intelligent conversation.</p>`,
+
+science:`<h1>8 · Scientific Limits</h1><h2>More parameters are not automatically better</h2><p>A larger model has more capacity, but capacity alone does not guarantee better results. Data quantity, data quality, optimization, architecture, context and compute all matter.</p><h2>Small datasets</h2><p>A tiny corpus can be memorized or produce repetitive behavior. That can still be useful for studying training.</p><h2>Context</h2><p>The recurrent state carries information forward, but a small recurrent model can struggle with long-range dependencies.</p><h2>This is not a modern production LLM</h2><p>This laboratory is deliberately much smaller. Its value is that the core training and inference mechanisms are inspectable and local.</p><h2>Integrity</h2><p>The interface distinguishes model-generated text from UI explanation. The application does not claim that generated text is intelligent merely because it was produced by a neural network.</p>`
+};
+function showHelp(k){$("helpContent").innerHTML=help[k];document.querySelectorAll("[data-help]").forEach(b=>b.classList.toggle("active",b.dataset.help===k))}
+
+/* -------- events -------- */
+document.querySelectorAll(".nav button").forEach(b=>b.onclick=()=>{
+ document.querySelectorAll(".nav button").forEach(x=>x.classList.remove("active"));b.classList.add("active");
+ document.querySelectorAll(".view").forEach(v=>v.classList.remove("active"));$("view-"+b.dataset.view).classList.add("active");
+});
+$("modelPreset").onchange=()=>{$("customModel").style.display=$("modelPreset").value==="custom"?"flex":"none";updateSizeUI()};
+$("contextLen").onchange=updateSizeUI;$("customEmb").onchange=updateSizeUI;$("customHidden").onchange=updateSizeUI;
+$("initModel").onclick=initializeModel;$("resetModel").onclick=resetModel;$("saveModel").onclick=saveModel;$("loadModel").onclick=()=>$("modelFile").click();$("modelFile").onchange=e=>{if(e.target.files[0])loadModelFile(e.target.files[0])};
+$("trainBtn").onclick=()=>trainSteps(Math.max(1,+$("trainSteps").value||100));$("stopBtn").onclick=stopTraining;$("oneStep").onclick=oneStep;
+$("generate").onclick=doGenerate;$("probe").onclick=doProbe;$("gradientCheck").onclick=gradientCheck;
+$("sampleCorpus").onclick=()=>{$("corpus").value=SAMPLE;corpus=SAMPLE;$("dataState").textContent="sample corpus loaded";$("charCount").textContent=fmtInt(SAMPLE.length)};
+$("loadTxt").onclick=()=>$("txtFile").click();$("txtFile").onchange=e=>{const f=e.target.files[0];if(!f)return;const r=new FileReader();r.onload=()=>{corpus=$("corpus").value+(corpus?"\n":"")+r.result;$("corpus").value=corpus;$("dataState").textContent=`combined local text · ${fmtInt(corpus.length)} chars`};r.readAsText(f)};
+$("clearCorpus").onclick=()=>{$("corpus").value="";corpus="";tokenizer.chars=[];tokenizer.map.clear();tokenizer.encoded=null;trainingSeqs=[];$("dataState").textContent="no custom corpus";renderVocab();renderStats()};
+$("prepareData").onclick=()=>{corpus=$("corpus").value;buildDataset()};
+$("clearChat").onclick=()=>{$("messages").innerHTML="";addMessage("Neural Chat is ready. It will not respond until a trained language model exists.","system")};
+$("sendChat").onclick=sendChat;$("chatInput").onkeydown=e=>{if(e.key==="Enter")sendChat()};
+document.querySelectorAll("[data-inspect]").forEach(b=>b.onclick=()=>{document.querySelectorAll("[data-inspect]").forEach(x=>x.classList.remove("active"));b.classList.add("active");inspectMode=b.dataset.inspect;renderInspector()});
+document.querySelectorAll("[data-help]").forEach(b=>b.onclick=()=>showHelp(b.dataset.help));
+
+/* startup */
+showHelp("start");
+addMessage("Neural Chat is ready. It is only a front-end to the current trained language model.","system");
+updateSizeUI();
+window.addEventListener("resize",()=>{drawLoss()});
+</script>
+</body>
+</html>
